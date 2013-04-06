@@ -118,7 +118,7 @@ void CAddNewUserDlg::OnBnClickedOk()
 	//判断密码输入是否有误
 	if(m_strComfPwd!=m_strUserPasswd)
 	{
-		AfxMessageBox(_T("两次输入密码不一致，请重新输入！"));
+		AfxMessageBox(_T("两次输入密码不一致，请重新输入！"));    
 		return;
 	}
 	try

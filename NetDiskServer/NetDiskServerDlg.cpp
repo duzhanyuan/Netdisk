@@ -10,6 +10,7 @@
 #include "SetDeprtNameDlg.h"
 #include "AdminLoginDlg.h"
 #include "AddNewUserDlg.h"
+#include "MyIOCP.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -210,6 +211,8 @@ void CNetDiskServerDlg::OnBnClickedMfcbtnQuit()
 //新建部门文件夹
 void CNetDiskServerDlg::AddDepartment()
 {
+
+	UpdateServData();
 	// TODO: Add your control notification handler code here
 	m_pAddNewDeprt=new CSetDeprtNameDlg();
 	if(m_pAddNewDeprt->DoModal()==IDOK)
@@ -288,7 +291,7 @@ void CNetDiskServerDlg::OnSelchangedTreeShowdeparment(NMHDR *pNMHDR, LRESULT *pR
 void CNetDiskServerDlg::OnBnClickedMfcbtnServcontrol()
 {
 	// TODO: Add your control notification handler code here
-
+	//启动服务器
 	if(m_iServControl==0)
 	{
 		GetDlgItem(IDC_MFCBTN_ADDDEPARTMENT)->EnableWindow(TRUE);
@@ -301,9 +304,11 @@ void CNetDiskServerDlg::OnBnClickedMfcbtnServcontrol()
 		m_tcShowDeprt.SelectItem(m_tcRoot);
 		GetDlgItem(IDC_MFCBTN_ADDUSER)->EnableWindow(FALSE);
 
+		StartServ();
 
 		return;
 	}
+	//停止服务器
 	if(m_iServControl==1)
 	{
 		GetDlgItem(IDC_MFCBTN_ADDDEPARTMENT)->EnableWindow(FALSE);
@@ -392,4 +397,70 @@ HTREEITEM CNetDiskServerDlg::ReturnDepartment(CString DeprtName)
 		hChildItem=m_tcShowDeprt.GetNextItem(hChildItem,TVGN_NEXT);
 	}
 	return NULL;
+}
+
+//启动服务器
+void CNetDiskServerDlg::StartServ()
+{
+	m_MyIocp.m_StatusLock.Lock();
+	m_MyIocp.m_hWnd=m_hWnd;
+	/*m_MyIocp.m_sSendText=m_sSendTxt;
+	m_MyIocp.m_bFlood=m_bFlood;*/
+	m_MyIocp.m_StatusLock.Unlock();
+
+	if(!m_MyIocp.Start(12345,
+		1200,
+		1,
+		0,
+		//-1, // No buffer reuse
+		0,
+		//-1, // No context reuse. 
+		0,
+		TRUE,
+		FALSE,
+		4))
+		AfxMessageBox(_T("Error could not start the Server"));
+}
+
+//更新服务器端信息
+void CNetDiskServerDlg::UpdateServData()
+{
+
+	ClientContext* pContext=NULL;
+	// to be sure that pContext Suddenly does not dissapear.. 
+	m_MyIocp.m_ContextMapLock.Lock();
+	pContext=m_MyIocp.FindClient(m_ID);
+	CString tmp;
+	if(pContext!=NULL)
+	{
+		pContext->m_ContextLock.Lock();
+		tmp=pContext->m_sReceived;
+		pContext->m_ContextLock.Unlock();
+	}
+	m_MyIocp.m_ContextMapLock.Unlock();
+	UpdateData(FALSE);
+
+	if(!m_MyIocp.IsStarted())
+	{
+		//DisableClientPanel();
+	}
+	AfxMessageBox(tmp);
+	//CWnd *pCtrl=NULL;
+	//pCtrl=GetDlgItem(IDC_SEND);
+	//if(m_bFlood)
+	//{
+	//	if(pCtrl!=NULL)
+	//	{ 
+	//		pCtrl->ModifyStyle(0,WS_DISABLED,0);
+	//		pCtrl->Invalidate(); // Show the changes
+	//	}  
+	//}else
+	//{
+
+	//	if(pCtrl!=NULL&&m_MyIocp.IsStarted())
+	//	{ 
+	//		pCtrl->ModifyStyle(WS_DISABLED,0,0);
+	//		pCtrl->Invalidate(); // Show the changes
+	//	}  
+	//}
 }

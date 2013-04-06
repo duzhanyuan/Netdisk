@@ -3,6 +3,8 @@
 //
 
 #pragma once
+#include"MyIOCP.h"
+
 class CSetDeprtNameDlg;
 
 // CNetDiskServerDlg dialog
@@ -40,9 +42,13 @@ public:
 	CSetDeprtNameDlg* m_pAddNewDeprt;
 	HTREEITEM m_hCurrent;//当前选中的节点
 	int m_iServControl;
+	MyIOCP m_MyIocp;
+	int m_ID;
 public:
 	BOOL ShowDeprtDbInfo();
 	HTREEITEM ReturnDepartment(CString DeprtName);
+	void StartServ();//启动服务器
+	void UpdateServData();
 public:
 	afx_msg void OnBnClickedMfcbtnSetserv();
 	afx_msg void OnBnClickedMfcbtnQuit();

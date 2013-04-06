@@ -72,7 +72,7 @@
     <LibraryPath>C:\Program Files\MySQL\MySQL Server 5.6\lib\debug;C:\Program Files\MySQL\MySQL Server 5.6\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
     <IncludePath>C:\Program Files\MySQL\MySQL Server 5.6\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files\MySQL\MySQL Server 5.6\lib\debug;C:\Program Files\MySQL\MySQL Server 5.6\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
@@ -114,6 +114,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -190,6 +191,9 @@
   <ItemGroup>
     <ClInclude Include="AddNewUserDlg.h" />
     <ClInclude Include="AdminLoginDlg.h" />
+    <ClInclude Include="IOCPBuffer.h" />
+    <ClInclude Include="IOCPS.h" />
+    <ClInclude Include="MyIOCP.h" />
     <ClInclude Include="NetDiskServer.h" />
     <ClInclude Include="NetDiskServerDlg.h" />
     <ClInclude Include="Resource.h" />
@@ -201,6 +205,9 @@
   <ItemGroup>
     <ClCompile Include="AddNewUserDlg.cpp" />
     <ClCompile Include="AdminLoginDlg.cpp" />
+    <ClCompile Include="IOCPBuffer.cpp" />
+    <ClCompile Include="IOCPS.cpp" />
+    <ClCompile Include="MyIOCP.cpp" />
     <ClCompile Include="NetDiskServer.cpp" />
     <ClCompile Include="NetDiskServerDlg.cpp" />
     <ClCompile Include="SetDeprtNameDlg.cpp" />

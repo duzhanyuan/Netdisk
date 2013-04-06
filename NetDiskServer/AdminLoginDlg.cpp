@@ -73,9 +73,10 @@ BOOL CAdminLoginDlg::OnInitDialog()
 			AfxMessageBox(_T("打开数据库失败！"));
 			return FALSE;
 		}
+
 		//获取管理员数据库数据
 		CRecordset rs(&m_dbAdmin);
-		rs.Open(CRecordset::snapshot,_T("select * from netdiskadmintb"));
+		rs.Open(CRecordset::snapshot,_T("SELECT * FROM netdiskadmintb"));
 		if(rs.IsBOF())
 			return FALSE;
 		//遍历管理员数据库
@@ -100,6 +101,7 @@ BOOL CAdminLoginDlg::OnInitDialog()
 	catch (CDBException* pe)
 	{
 		pe->ReportError();
+
 		pe->Delete();
 	}
 	//设置初始化公司名称是否默认
