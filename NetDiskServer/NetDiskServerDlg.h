@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include"MyIOCP.h"
+#include "IOCPModel.h"
 
 class CSetDeprtNameDlg;
 
@@ -42,13 +42,14 @@ public:
 	CSetDeprtNameDlg* m_pAddNewDeprt;
 	HTREEITEM m_hCurrent;//当前选中的节点
 	int m_iServControl;
-	MyIOCP m_MyIocp;
-	int m_ID;
+	CIOCPModel m_iocp;
+
 public:
 	BOOL ShowDeprtDbInfo();
 	HTREEITEM ReturnDepartment(CString DeprtName);
-	void StartServ();//启动服务器
-	void UpdateServData();
+
+
+
 public:
 	afx_msg void OnBnClickedMfcbtnSetserv();
 	afx_msg void OnBnClickedMfcbtnQuit();

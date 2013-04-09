@@ -123,7 +123,8 @@ void CAddNewUserDlg::OnBnClickedOk()
 	}
 	try
 	{
-		tmpSql.Format(_T("insert netdisk_user_tb value ('%s','%s','%s','%s','%s')"),m_strUserServAddr,m_iUserServPort,m_strUserName,m_strUserPasswd,m_strUserFileSavePath);
+		
+		tmpSql.Format(_T("insert netdisk_user_tb value ('%s','%d','%s','%s','%s')"),m_strUserServAddr,m_iUserServPort,m_strUserName,m_strUserPasswd,m_strUserFileSavePath);
 		db.ExecuteSQL(tmpSql);
 	}
 	catch(CDBException* pe)

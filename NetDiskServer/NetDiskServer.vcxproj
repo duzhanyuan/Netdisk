@@ -190,10 +190,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AddNewUserDlg.h" />
-    <ClInclude Include="AdminLoginDlg.h" />
-    <ClInclude Include="IOCPBuffer.h" />
-    <ClInclude Include="IOCPS.h" />
-    <ClInclude Include="MyIOCP.h" />
+    <ClInclude Include="IOCPModel.h" />
     <ClInclude Include="NetDiskServer.h" />
     <ClInclude Include="NetDiskServerDlg.h" />
     <ClInclude Include="Resource.h" />
@@ -205,9 +202,7 @@
   <ItemGroup>
     <ClCompile Include="AddNewUserDlg.cpp" />
     <ClCompile Include="AdminLoginDlg.cpp" />
-    <ClCompile Include="IOCPBuffer.cpp" />
-    <ClCompile Include="IOCPS.cpp" />
-    <ClCompile Include="MyIOCP.cpp" />
+    <ClCompile Include="IOCPModel.cpp" />
     <ClCompile Include="NetDiskServer.cpp" />
     <ClCompile Include="NetDiskServerDlg.cpp" />
     <ClCompile Include="SetDeprtNameDlg.cpp" />
