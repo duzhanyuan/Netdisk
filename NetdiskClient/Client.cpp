@@ -121,13 +121,16 @@ void Client::SendMsgToServ(CString strMsg)
 	nBytesSend = send(m_Client.sock, szTemp, strlen(szTemp), 0);
 	if (SOCKET_ERROR == nBytesSend) 
 	{
-		AfxMessageBox(_T("发送失败，错误代码为 %s"),GetLastError());
+		CString tmpStr;
+		tmpStr.Format(_T("发送失败，错误代码为:%d"),WSAGetLastError());
+		AfxMessageBox(tmpStr);
 		return ; 
 	}	
 
 }
 
-int Client::RecvMsg()
+//接收服务器返回信息
+int Client::RecvloginMsg()
 {
 	int iResult;
 	char recvbuf[MAX_BUFFER_LEN];
@@ -151,11 +154,40 @@ int Client::RecvMsg()
 
 }
 
+//清除套接字
 void Client::Clean()
 {
 	if(m_Client.sock != NULL)
 	{
 		closesocket(m_Client.sock);
 		m_Client.sock=NULL;
+	}
+}
+
+//更新客户端目录信息
+bool Client::UpdateClientCatalog(CString baseFolder)
+{
+	//将用户目录的根目录名发送给服务器，根目录名即为用户登录名
+	SendMsgToServ(baseFolder);
+
+	//获取用户返回的目录信息
+	int iResult;
+	char recvbuf[MAX_BUFFER_LEN];
+	int recvbuflen=MAX_BUFFER_LEN;
+	iResult=recv(m_Client.sock,recvbuf,recvbuflen,0);
+	if(0 == iResult)
+	{
+		AfxMessageBox(_T("Connection closed\n"));
+		return false;
+	}
+	//成功获取数据
+	if(iResult > 0)
+	{
+		
+	}
+	else
+	{
+		AfxMessageBox(_T("recv failed: %d\n"), WSAGetLastError());
+		return false;
 	}
 }

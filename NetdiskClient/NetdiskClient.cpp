@@ -76,7 +76,10 @@ BOOL CNetdiskClientApp::InitInstance()
 	CUserLoginDlg LoginDlg;
 	if(LoginDlg.DoModal()==IDOK)
 	{
-		
+		//m_TmpClient.nThreadNo=LoginDlg.m_Client.m_Client.nThreadNo;
+		//m_TmpClient.pClient=LoginDlg.m_Client.m_Client.pClient;
+		//m_TmpClient.sock=LoginDlg.m_Client.m_Client.sock;
+		//m_TmpClient.szBuffer=LoginDlg.m_Client.m_Client.szBuffer;
 	}
 	else
 		return FALSE;
@@ -84,6 +87,7 @@ BOOL CNetdiskClientApp::InitInstance()
 	CNetdiskClientDlg dlg;
 	m_pMainWnd = &dlg;
 	INT_PTR nResponse = dlg.DoModal();
+	
 	if (nResponse == IDOK)
 	{
 		// TODO: Place code here to handle when the dialog is

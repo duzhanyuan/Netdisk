@@ -9,6 +9,8 @@
 #endif
 
 #include "resource.h"		// main symbols
+#include "Client.h"
+//class Client;
 
 
 // CNetdiskClientApp:
@@ -23,7 +25,8 @@ public:
 // Overrides
 public:
 	virtual BOOL InitInstance();
-
+public:
+	SOCKET m_TmpClient;
 // Implementation
 
 	DECLARE_MESSAGE_MAP()

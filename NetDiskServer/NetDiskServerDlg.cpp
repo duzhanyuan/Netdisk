@@ -11,7 +11,7 @@
 #include "SetDeprtNameDlg.h"
 #include "AdminLoginDlg.h"
 #include "AddNewUserDlg.h"
-
+#include "ServIndex.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -245,13 +245,15 @@ void CNetDiskServerDlg::OnBtnAdduser()
 	// TODO: Add your control notification handler code here
 	//新增用户，设置用户信息
 	CAddNewUserDlg* pNewUser=new CAddNewUserDlg();
+	CString strSelDeprt;
+	CString strAddUser;
 	if(IDOK==pNewUser->DoModal())
 	{
 		try
 		{
 			//选中的部门名称
-			CString strSelDeprt=m_tcShowDeprt.GetItemText(m_hCurrent);
-			CString strAddUser=pNewUser->m_strUserName;
+			strSelDeprt=m_tcShowDeprt.GetItemText(m_hCurrent);
+			strAddUser=pNewUser->m_strUserName;
 			CString tmpSql;
 			tmpSql.Format(_T("insert netdisk_department_tb value ('%s','%s')"),strSelDeprt,strAddUser);
 			m_dbDepart.ExecuteSQL(tmpSql);
@@ -264,6 +266,15 @@ void CNetDiskServerDlg::OnBtnAdduser()
 			pe->ReportError();
 			pe->Delete();
 		}
+
+		//添加用户目录索引文件
+		CServIndex userIndex;
+		if(!userIndex.CreateIndex(strAddUser))
+		{
+			AfxMessageBox(_T("创建用户目录索引失败！"));
+			return ;
+		}
+
 	}
 }
 
@@ -331,13 +342,20 @@ void CNetDiskServerDlg::OnBnClickedMfcbtnServcontrol()
 
 }
 
-
+//删除一个部门
 void CNetDiskServerDlg::OnBnClickedMfcbtnDeldeprt()
 {
 	// TODO: Add your control notification handler code here
+	CServIndex* tmpServIndex=new CServIndex();
+	tmpServIndex->CreateIndex(_T("user"));
+	//tmpServIndex->FindSubCatalogAndFile(tmpServIndex->m_strRootPath+_T("user"),tmpServIndex->m_catalogIndexHead);
+	//tmpServIndex->UpdateIndex(tmpServIndex->m_strRootPath+_T("user"),tmpServIndex->m_catalogIndexHead);
+	//CString tmp=tmpServIndex->m_strIndexPath+_T("user.txt");
+	//CFile pcFile(tmp,CFile::modeCreate|CFile::modeWrite);
+	//tmpServIndex->writeCatalogInfo(tmpServIndex->m_catalogIndexHead,&pcFile);
 }
 
-
+//删除一个用户
 void CNetDiskServerDlg::OnBnClickedMfcbtnDeluser()
 {
 	// TODO: Add your control notification handler code here

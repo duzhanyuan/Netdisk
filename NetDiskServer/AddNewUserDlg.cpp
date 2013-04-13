@@ -81,6 +81,23 @@ void CAddNewUserDlg::OnBnClickedOk()
 		AfxMessageBox(_T("输入信息不完整，请重新输入！"));
 		return;
 	}
+
+	//判断用户名中是否存在非法字符
+	char illegalChar[]={'!','@','#','$','%','^','&','*','(',')','{','}',
+		'[',']','\'','\\','|','?','\"','/','>','<','.',
+		':',';','~'};
+	char c_ascll;
+	for(int i=0;i<m_strUserName.GetLength();i++)
+	{
+		c_ascll=m_strUserName[i];
+		for(int j=0;j<27;j++)
+			if(c_ascll == illegalChar[j])
+			{
+				AfxMessageBox(_T("用户名中包含非法字符，请重新输入！"));
+				return;
+			}
+	}
+
 	//连接部门数据库，判断用户名是否存在，使用部门名称+用户名验证
 	CDatabase db;
 	CString tmpSql,numstr;

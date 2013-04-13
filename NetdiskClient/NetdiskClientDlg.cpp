@@ -107,8 +107,9 @@ BOOL CNetdiskClientDlg::OnInitDialog()
 	popupMenu->AppendMenuW(MF_STRING, 501, _T("上传文件夹"));
 	m_mbUpload.m_hMenu = popupMenu->m_hMenu;
 
-	m_Client.Start();
-
+	//m_Client.Start();
+	//将登录验证成功之后的连接socket赋给主程序
+	m_Client.m_Client.sock=((CNetdiskClientApp*)AfxGetApp())->m_TmpClient;
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 

@@ -16,8 +16,9 @@ CUserLoginDlg::CUserLoginDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CUserLoginDlg::IDD, pParent)
 {
 
-	m_strName = _T("");
-	m_strPasswd = _T("");
+	m_strName = _T("user");
+	m_strPasswd = _T("123456");
+	m_ndApp=(CNetdiskClientApp*)AfxGetApp() ;
 }
 
 CUserLoginDlg::~CUserLoginDlg()
@@ -86,7 +87,8 @@ void CUserLoginDlg::OnBnClickedBtnLogin()
 	// TODO: Add your control notification handler code here
 	UpdateData(TRUE); 
 	//启动客户端
-	m_Client.Start();
+	if(!m_Client.Start())
+		return;
 
 	//判断用户名是否为空
 	if(m_strName==_T(""))
@@ -103,11 +105,19 @@ void CUserLoginDlg::OnBnClickedBtnLogin()
 	}
 
 	//判断用户名中是否存在非法字符
-	unsigned char *c_ascll;
-	BYTE *pChar ;
-	pChar= (BYTE*)m_strName.GetBuffer(0);
+	char illegalChar[]={'!','@','#','$','%','^','&','*','(',')','{','}',
+						'[',']','\'','\\','|','?','\"','/','>','<','.',
+						':',';','~'};
+	char c_ascll;
 	for(int i=0;i<m_strName.GetLength();i++)
 	{
+		c_ascll=m_strName[i];
+		for(int j=0;j<27;j++)
+			if(c_ascll == illegalChar[j])
+			{
+				AfxMessageBox(_T("用户名中包含非法字符，请重新输入！"));
+				return;
+			}
 		//c_ascll[0]=m_strName[i];
 		//c_ascll[1]=m_strName[i+1];
 		////c_ascll=pChar[i];
@@ -119,27 +129,32 @@ void CUserLoginDlg::OnBnClickedBtnLogin()
 	}
 	m_Client.SendMsgToServ(m_strName+_T(":")+m_strPasswd);
 
-	int retvalue=m_Client.RecvMsg();
+	int retvalue=m_Client.RecvloginMsg();
 	switch(retvalue){
 	case LOGIN_SUCCESS:
+		////保存连接成功的socket
+		m_ndApp->m_TmpClient=m_Client.m_Client.sock;
 		CDialog::OnOK();
 		break;
 	case -1:
 		AfxMessageBox(_T("程序出错，重新输入！"));
+		m_Client.Clean();
 		break;
 	case OTHER_ERROR:
 		AfxMessageBox(_T("服务器操作失败！"));
+		m_Client.Clean();
 		break;
 
 	case USERNAME_NOTEXIST:
 		AfxMessageBox(_T("用户名不存在！"));
+		m_Client.Clean();		
 		break;
 
 	case PASSWD_ERROR:
 		AfxMessageBox(_T("密码错误，重新输入！"));
+		m_Client.Clean();		
 		break;
 	}
-	m_Client.Clean();
 	return ;
 }
  

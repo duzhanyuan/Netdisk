@@ -190,23 +190,34 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AddNewUserDlg.h" />
+    <ClInclude Include="AdminLoginDlg.h" />
+    <ClInclude Include="CatalogIndex.h" />
+    <ClInclude Include="FileIndex.h" />
     <ClInclude Include="IOCPModel.h" />
+    <ClInclude Include="LoaclFileOpr.h" />
     <ClInclude Include="NetDiskServer.h" />
     <ClInclude Include="NetDiskServerDlg.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="ServIndex.h" />
     <ClInclude Include="SetDeprtNameDlg.h" />
     <ClInclude Include="SetServDlg.h" />
+    <ClInclude Include="ShareFileOpr.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AddNewUserDlg.cpp" />
     <ClCompile Include="AdminLoginDlg.cpp" />
+    <ClCompile Include="CatalogIndex.cpp" />
+    <ClCompile Include="FileIndex.cpp" />
     <ClCompile Include="IOCPModel.cpp" />
+    <ClCompile Include="LoaclFileOpr.cpp" />
     <ClCompile Include="NetDiskServer.cpp" />
     <ClCompile Include="NetDiskServerDlg.cpp" />
+    <ClCompile Include="ServIndex.cpp" />
     <ClCompile Include="SetDeprtNameDlg.cpp" />
     <ClCompile Include="SetServDlg.cpp" />
+    <ClCompile Include="ShareFileOpr.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

@@ -22,6 +22,7 @@ public:
 	CString m_strName;
 	CString m_strPasswd;
 	Client m_Client;
+	CNetdiskClientApp* m_ndApp;
 private:
  
 	virtual BOOL OnInitDialog();
