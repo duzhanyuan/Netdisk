@@ -5,7 +5,7 @@
 #include "NetDiskServer.h"
 #include "ServIndex.h"
 #include "locale.h"
-
+#include "IOCPModel.h"
 // CServIndex
 
 CServIndex::CServIndex()
@@ -26,17 +26,23 @@ CServIndex::~CServIndex()
 int CServIndex::getSubCatalogCount(CCatalogIndex* catalogHead)
 {
 	int count=0;
-	CCatalogIndex* head=catalogHead;
-	
+	CCatalogIndex* head;
+	if(catalogHead!=NULL)
+		head=catalogHead->m_subCatalog;
+	else
+		return count;
+
 
 	while (head!=NULL)
 	{
 		count++;
-		head=head->m_subCatalog;
+		head=head->m_NextCatalog;
 	}
 
 	return count;
 }
+
+
 //获取同级目录数
 int CServIndex::getNextCatalogCount(CCatalogIndex* catalogHead)
 {
@@ -67,122 +73,153 @@ int CServIndex::getSubFileCount(CFileIndex* fileHead)
 }
 
 //写入目录索引信息
-void CServIndex::writeSubCatalogInfo(CCatalogIndex* catalogHead,CFile* pcFile)
-{
-	int count=getSubCatalogCount(catalogHead);
-	CArchive carchive(pcFile,CArchive::store);
-	carchive<<count;
-
-	while(catalogHead !=NULL)
-	{
-		carchive<<catalogHead->m_strName<<catalogHead->m_strPath<<catalogHead->m_strEditTime<<catalogHead->m_bIsShare<<catalogHead->m_strSharePath;
-		//writeSubCatalogInfo(catalogHead->m_subCatalog,pcFile);
-		catalogHead=catalogHead->m_NextCatalog;
-	}
-
-}
+//void CServIndex::writeSubCatalogInfo(CCatalogIndex* catalogHead,CFile* pcFile)
+//{
+//	int count=getSubCatalogCount(catalogHead);
+//	CArchive carchive(pcFile,CArchive::store);
+//	carchive<<count;
+//
+//	while(catalogHead !=NULL)
+//	{
+//		carchive<<catalogHead->m_strName<<catalogHead->m_strPath<<catalogHead->m_strEditTime<<catalogHead->m_bIsShare<<catalogHead->m_strSharePath;
+//		//writeSubCatalogInfo(catalogHead->m_subCatalog,pcFile);
+//		catalogHead=catalogHead->m_NextCatalog;
+//	}
+//
+//}
 
 //写入文件索引信息
-void CServIndex::writeSubFileInfo(CFileIndex* fileIndex,CFile* pcFile)
-{
-	int count=getSubFileCount(fileIndex);
-	CArchive carchive(pcFile,CArchive::store);
-	carchive<<count;
-
-	while(fileIndex != NULL)
-	{
-		carchive<<fileIndex->m_strName<<fileIndex->m_strPath<<fileIndex->m_strEditTime<<fileIndex->m_bIsShare<<fileIndex->m_strSharePath;
-
-
-		fileIndex=fileIndex->m_Next;
-	}
-}
+//void CServIndex::writeSubFileInfo(CFileIndex* fileIndex,CFile* pcFile)
+//{
+//	int count=getSubFileCount(fileIndex);
+//	CArchive carchive(pcFile,CArchive::store);
+//	carchive<<count;
+//
+//	while(fileIndex != NULL)
+//	{
+//		carchive<<fileIndex->m_strName<<fileIndex->m_strPath<<fileIndex->m_strEditTime<<fileIndex->m_bIsShare<<fileIndex->m_strSharePath;
+//
+//
+//		fileIndex=fileIndex->m_Next;
+//	}
+//}
 
 //写入同级目录信息
-void CServIndex::writeNextCatalogInfo(CCatalogIndex* catalogHead,CFile* pcFile)
-{
-	int count=getNextCatalogCount(catalogHead);
-	CArchive carchive(pcFile,CArchive::store);
-	carchive<<count;
+//void CServIndex::writeNextCatalogInfo(CCatalogIndex* catalogHead,CFile* pcFile)
+//{
+//	int count=getNextCatalogCount(catalogHead);
+//	CArchive carchive(pcFile,CArchive::store);
+//	carchive<<count;
+//
+//	while(catalogHead !=NULL)
+//	{
+//		carchive<<catalogHead->m_strName<<catalogHead->m_strPath<<catalogHead->m_strEditTime<<catalogHead->m_bIsShare<<catalogHead->m_strSharePath;
+//		writeSubFileInfo(catalogHead->m_subFile,pcFile);
+//		writeSubCatalogInfo(catalogHead->m_subCatalog,pcFile);
+//
+//		catalogHead=catalogHead->m_NextCatalog;
+//	}
+//}
 
-	while(catalogHead !=NULL)
-	{
-		carchive<<catalogHead->m_strName<<catalogHead->m_strPath<<catalogHead->m_strEditTime<<catalogHead->m_bIsShare<<catalogHead->m_strSharePath;
-		writeSubFileInfo(catalogHead->m_subFile,pcFile);
-		writeSubCatalogInfo(catalogHead->m_subCatalog,pcFile);
 
-		catalogHead=catalogHead->m_NextCatalog;
-	}
-}
-void CServIndex::testWriteFile(CFileIndex* fileHead,CStdioFile* pStdFile)
+//写入文件索引信息
+void CServIndex::writeSubFileInfo(CFileIndex* fileHead,CStdioFile* pStdFile)
 {
-	int count=getSubFileCount(fileHead);
+	//int count;
 	//CString tmp;
-	//tmp.Format(_T("%d"),count);
-	//pStdFile->WriteString(tmp+_T("-"));
+	//		count=getSubFileCount(fileHead);
+	//	tmp.Format(_T("%d"),count);
+	//	pStdFile->WriteString(tmp+_T("-"));
 
 	while(fileHead!=NULL)
 	{
-		pStdFile->WriteString(fileHead->m_strName+_T("-"));
-		pStdFile->WriteString(fileHead->m_strPath+_T("-"));
-		pStdFile->WriteString(fileHead->m_strEditTime+_T("-"));
+		pStdFile->WriteString(_T("F|"));//D表明是目录，F表明是文件
+
+		pStdFile->WriteString(fileHead->m_strName+_T("|"));
+		//pStdFile->WriteString(fileHead->m_strParentCatalogName+_T("|"));
+		pStdFile->WriteString(fileHead->m_strPath+_T("|"));
+		pStdFile->WriteString(fileHead->m_strEditTime+_T("|"));
+		pStdFile->WriteString(fileHead->m_strFileSize+_T("|"));
 		if(fileHead->m_bIsShare)
-			pStdFile->WriteString(_T("TRUE-"));
+		{
+			pStdFile->WriteString(_T("TRUE|"));
+			pStdFile->WriteString(fileHead->m_strSharePath+_T(";"));
+		}		
 		else
-			pStdFile->WriteString(_T("FALSE-"));
-		pStdFile->WriteString(fileHead->m_strSharePath+_T("-"));
+		{
+			pStdFile->WriteString(_T("FALSE|"));
+			pStdFile->WriteString(_T("*;"));
+		}
 		pStdFile->WriteString(_T("\n"));
 		fileHead=fileHead->m_Next;
 	}
 
 }
-void CServIndex::testWriteSub(CCatalogIndex* catalogHead,CStdioFile* pStdFile)
+//void CServIndex::testWriteSub(CCatalogIndex* catalogHead,CStdioFile* pStdFile)
+//{
+//	int count=getSubCatalogCount(catalogHead);
+//	//CString tmp;
+//	//tmp.Format(_T("%d"),count);
+//	//pStdFile->WriteString(tmp+_T("-"));
+//	
+//	while(catalogHead!=NULL)
+//	{
+//		pStdFile->WriteString(catalogHead->m_strName+_T("-"));
+//		pStdFile->WriteString(catalogHead->m_strPath+_T("-"));
+//		pStdFile->WriteString(catalogHead->m_strEditTime+_T("-"));
+//		if(catalogHead->m_bIsShare)
+//			pStdFile->WriteString(_T("TRUE-"));
+//		else
+//			pStdFile->WriteString(_T("FALSE-"));
+//		pStdFile->WriteString(catalogHead->m_strSharePath+_T("-"));
+//		pStdFile->WriteString(_T("\n"));
+//		
+//		testWriteSub(catalogHead->m_subCatalog,pStdFile);
+//		testWriteFile(catalogHead->m_subFile,pStdFile);
+//
+//		catalogHead= catalogHead->m_subCatalog;
+//	}
+//
+//}
+
+
+//写入目录信息
+void CServIndex::writeNextCatalogInfo(CCatalogIndex* catalogHead,CStdioFile* pStdFile)
 {
-	int count=getSubCatalogCount(catalogHead);
-	//CString tmp;
-	//tmp.Format(_T("%d"),count);
-	//pStdFile->WriteString(tmp+_T("-"));
-	
+	CString tmp;
+	int count;
+
 	while(catalogHead!=NULL)
 	{
-		pStdFile->WriteString(catalogHead->m_strName+_T("-"));
-		pStdFile->WriteString(catalogHead->m_strPath+_T("-"));
-		pStdFile->WriteString(catalogHead->m_strEditTime+_T("-"));
-		if(catalogHead->m_bIsShare)
-			pStdFile->WriteString(_T("TRUE-"));
-		else
-			pStdFile->WriteString(_T("FALSE-"));
-		pStdFile->WriteString(catalogHead->m_strSharePath+_T("-"));
-		pStdFile->WriteString(_T("\n"));
+		pStdFile->WriteString(_T("D|"));//D表明是目录，F表明是文件
+		//写入子文件数量
+		count=getSubCatalogCount(catalogHead);
+		tmp.Format(_T("%d"),count);
+		pStdFile->WriteString(tmp+_T("|"));
 		
-		testWriteSub(catalogHead->m_subCatalog,pStdFile);
-		testWriteFile(catalogHead->m_subFile,pStdFile);
+		//写入子文件数量
+		count=getSubFileCount(catalogHead->m_subFile);
+		tmp.Format(_T("%d"),count);
+		pStdFile->WriteString(tmp+_T("|"));
 
-		catalogHead= catalogHead->m_subCatalog;
-	}
-
-}
-void CServIndex::testWriteNext(CCatalogIndex* catalogHead,CStdioFile* pStdFile)
-{
-	int count=getNextCatalogCount(catalogHead);
-	//CString tmp;
-	//tmp.Format(_T("%d"),count);
-	//pStdFile->WriteString(tmp+_T("-"));
-
-	while(catalogHead!=NULL)
-	{
-		pStdFile->WriteString(catalogHead->m_strName+_T("-"));
-		pStdFile->WriteString(catalogHead->m_strPath+_T("-"));
-		pStdFile->WriteString(catalogHead->m_strEditTime+_T("-"));
+		pStdFile->WriteString(catalogHead->m_strName+_T("|"));
+		//pStdFile->WriteString(catalogHead->m_strParentCatalogName+_T("|"));
+		pStdFile->WriteString(catalogHead->m_strPath+_T("|"));
+		pStdFile->WriteString(catalogHead->m_strEditTime+_T("|"));
 		if(catalogHead->m_bIsShare)
-			pStdFile->WriteString(_T("TRUE-"));
+		{
+			pStdFile->WriteString(_T("TRUE|"));
+			pStdFile->WriteString(catalogHead->m_strSharePath+_T(";"));
+		}
 		else
-			pStdFile->WriteString(_T("FALSE-"));
-		pStdFile->WriteString(catalogHead->m_strSharePath+_T("-"));
+		{
+			pStdFile->WriteString(_T("FALSE|"));
+			pStdFile->WriteString(_T("*;"));
+		}
 		pStdFile->WriteString(_T("\n"));
 
-		testWriteNext(catalogHead->m_subCatalog,pStdFile);
-		testWriteFile(catalogHead->m_subFile,pStdFile);
+		writeNextCatalogInfo(catalogHead->m_subCatalog,pStdFile);
+		writeSubFileInfo(catalogHead->m_subFile,pStdFile);
 		catalogHead=catalogHead->m_NextCatalog;
 	}
 
@@ -243,8 +280,8 @@ void CServIndex::readNextCatalogInfo(CCatalogIndex* catalogHead,CFile* pcFile)
 	}
 }
 
-//创建用户索引文件
-BOOL CServIndex::CreateIndex(CString rootName)
+//创建、更新用户索引文件
+BOOL CServIndex::UpdateIndex(CString rootName)
 {
 	CString path=m_strIndexPath;
 	path+=rootName+_T(".txt");
@@ -255,8 +292,8 @@ BOOL CServIndex::CreateIndex(CString rootName)
 	{
 
 		//更新索引信息
-		UpdateIndex(m_strRootPath+rootName,m_catalogIndexHead);
-		testWriteNext(m_catalogIndexHead->m_subCatalog,&pStdioFile);
+		UpdateIndexList(m_strRootPath+rootName,m_catalogIndexHead);
+		writeNextCatalogInfo(m_catalogIndexHead->m_subCatalog,&pStdioFile);
 		AfxMessageBox(_T("索引文件创建成功!"));
 
 		pStdioFile.Close();
@@ -276,17 +313,18 @@ BOOL CServIndex::CreateIndex(CString rootName)
 	return FALSE;
 }
 
-//更新用户目录索引文件
-void CServIndex::UpdateIndex(CString rootPath,CCatalogIndex* catalogIndexHead)
+//更新用户目录索引文件链表
+void CServIndex::UpdateIndexList(CString rootPath,CCatalogIndex* catalogIndexHead)
 {
 	BuildSubCatalogAndFileList(rootPath,catalogIndexHead);
 	CCatalogIndex* tmp=catalogIndexHead->m_subCatalog;
-
-	while(tmp!=NULL)
+	RecurBuildCatalogList(tmp->m_strPath,tmp);
+	/*while(tmp!=NULL)
 	{
+		BuildSubCatalogAndFileList(tmp->m_strPath,tmp);
 		RecurBuildCatalogList(tmp->m_strPath,tmp);
 		tmp=tmp->m_NextCatalog;
-	}
+	}*/
 }
 
 //递归建立子目录链表
@@ -300,38 +338,46 @@ void CServIndex::RecurBuildCatalogList(CString path,CCatalogIndex* rootIndex)
 	CCatalogIndex* tmpSubCatIndex=rootIndex->m_subCatalog;
 	isFound=finder.FindFile(path+_T("\\*.*"));
 
-	BuildSubCatalogAndFileList(path,rootIndex);
-
-	while(isFound)
+	while(rootIndex!=NULL)
 	{
-		isFound=finder.FindNextFile();
-		if(finder.IsDots())
-			continue;
-		if(finder.IsDirectory())
-		{
-			//strTmpDir=_T("");
-			strTmpDir=finder.GetFilePath();
+		BuildSubCatalogAndFileList(rootIndex->m_strPath,rootIndex);
+		if(rootIndex->m_subCatalog!=NULL )
+			RecurBuildCatalogList(rootIndex->m_subCatalog->m_strPath,rootIndex->m_subCatalog);
 
-			if(IsDirecEmpty(strTmpDir))
-				return;
-			//添加下一个目录索引节点
-			CCatalogIndex* CatalogIndexItem=new CCatalogIndex();
-			CatalogIndexItem->m_strName=finder.GetFileName();
-			CatalogIndexItem->m_strPath=strTmpDir;
-			finder.GetLastAccessTime(tmpTime);
-			tmpStr = tmpTime.Format(_T("%c"));
-			_tprintf_s(_T("%s\n"), (LPCTSTR) tmpStr);
-			CatalogIndexItem->m_strEditTime=tmpStr;
-			CatalogIndexItem->m_bIsShare=FALSE;
-			CatalogIndexItem->m_strSharePath=_T("");
-			CatalogIndexItem->m_subFile=NULL;
-			CatalogIndexItem->m_NextCatalog=NULL;
-
-			CatalogIndexItem->m_subCatalog=rootIndex->m_subCatalog;
-			rootIndex->m_subCatalog=CatalogIndexItem;
-			RecurBuildCatalogList(strTmpDir,rootIndex->m_subCatalog);
-		}
+		rootIndex=rootIndex->m_NextCatalog;
 	}
+	//BuildSubCatalogAndFileList(path,rootIndex);
+
+	//while(isFound)
+	//{
+	//	isFound=finder.FindNextFile();
+	//	if(finder.IsDots())
+	//		continue;
+	//	if(finder.IsDirectory())
+	//	{
+	//		strTmpDir=_T("");
+	//		strTmpDir=finder.GetFilePath();
+
+	//		if(IsDirecEmpty(strTmpDir))
+	//			return;
+	//		//添加下一个目录索引节点
+	//		//CCatalogIndex* CatalogIndexItem=new CCatalogIndex();
+	//		//CatalogIndexItem->m_strName=finder.GetFileName();
+	//		//CatalogIndexItem->m_strPath=strTmpDir;
+	//		//finder.GetLastAccessTime(tmpTime);
+	//		//tmpStr = tmpTime.Format(_T("%c"));
+	//		//_tprintf_s(_T("%s\n"), (LPCTSTR) tmpStr);
+	//		//CatalogIndexItem->m_strEditTime=tmpStr;
+	//		//CatalogIndexItem->m_bIsShare=FALSE;
+	//		//CatalogIndexItem->m_strSharePath=_T("");
+	//		//CatalogIndexItem->m_subFile=NULL;
+	//		//CatalogIndexItem->m_NextCatalog=NULL;
+
+	//		//CatalogIndexItem->m_subCatalog=rootIndex->m_subCatalog;
+	//		//rootIndex->m_subCatalog=CatalogIndexItem;
+	//		RecurBuildCatalogList(strTmpDir,rootIndex->m_subCatalog);
+	//	}
+	//}
 	//rootIndex->m_subCatalog=tmpSubCatIndex;
 }
 
@@ -374,6 +420,7 @@ void CServIndex::BuildSubCatalogAndFileList(CString rootPath,CCatalogIndex* root
 			//添加下一个目录索引节点
 			CCatalogIndex* CatalogIndexItem=new CCatalogIndex();
 			CatalogIndexItem->m_strName=finder.GetFileName();
+			//CatalogIndexItem->m_strParentCatalogName=finder.GetRoot();
 			CatalogIndexItem->m_strPath=strTmpDir;
 			finder.GetLastAccessTime(tmpTime);
 			tmpStr = tmpTime.Format(_T("%c"));
@@ -408,11 +455,19 @@ void CServIndex::BuildSubCatalogAndFileList(CString rootPath,CCatalogIndex* root
 			//添加当前用户文件索引链表节点
 			CFileIndex* fileIndexItem=new CFileIndex();
 			fileIndexItem->m_strName=finder.GetFileName();
+			//fileIndexItem->m_strParentCatalogName=finder.GetRoot();
 			fileIndexItem->m_strPath=finder.GetFilePath();
 			finder.GetLastAccessTime(tmpTime);
 			tmpStr = tmpTime.Format(_T("%c"));
 			_tprintf_s(_T("%s\n"), (LPCTSTR) tmpStr);
 			fileIndexItem->m_strEditTime=tmpStr;
+			ULONGLONG fileSize=finder.GetLength();
+			if(fileSize<1024)
+				fileIndexItem->m_strFileSize.Format(_T("%.1lf B"),(double)fileSize);
+			else if(fileSize>=1024&&fileSize<(1024*1024))
+				fileIndexItem->m_strFileSize.Format(_T("%.1lf KB"),(double)fileSize/1024.0f);
+			else
+				fileIndexItem->m_strFileSize.Format(_T("%.1lf MB"),(double)fileSize/(1024*1024.0f));
 			fileIndexItem->m_bIsShare=FALSE;
 			fileIndexItem->m_strSharePath=_T("");
 
@@ -452,7 +507,8 @@ BOOL CServIndex::IsDirecEmpty(CString path)
 	int count=0;
 	BOOL isWork;
 	isWork=finder.FindFile(path+_T("\\*.*"));
-
+	if(!isWork)
+		return FALSE;
 	while(isWork)
 	{
 		isWork=finder.FindNextFile();
@@ -463,3 +519,132 @@ BOOL CServIndex::IsDirecEmpty(CString path)
 	return (count>0?FALSE:TRUE);
 }
 // CServIndex member functions
+
+//获取用户索引信息
+CString CServIndex::GetIndexInfo(CString &rootName)
+{
+	CString path=m_strIndexPath;
+	path += rootName+_T(".txt");
+	setlocale( LC_CTYPE, ("chs"));
+
+	CStdioFile pStdioFile;
+	CString tmpStr;
+	CString strIndexText;
+
+	if(pStdioFile.Open(path,CFile::modeRead))
+	{
+		while(pStdioFile.ReadString(tmpStr))
+		{
+			strIndexText+=tmpStr;
+		}
+		pStdioFile.Close();
+		return strIndexText;
+	}
+	return NULL;
+}
+
+//获取某一个目录下的文件和文件夹信息
+CString CServIndex::getCatalogInfo(CString floderPath)
+{
+	if(floderPath==_T(""))
+		return _T("");
+
+	CString	indexInfo=_T("");
+	CString servFloderPath=m_strRootPath+floderPath;
+	int pos=floderPath.Find('\\');
+	CString tmpStr,tmpName,tmpPath;
+	CString oneIndexInfo;
+	if(-1!=pos)
+		tmpStr=GetIndexInfo(floderPath.Left(pos));
+	else
+		tmpStr=GetIndexInfo(floderPath);
+
+	CArray<CString,CString&> *oneIndexInfoArr=new CArray<CString,CString&>();
+
+
+	while(tmpStr.GetLength()>0)
+	{
+		oneIndexInfo=GetOneIndexInfo(tmpStr,pos);
+		tmpStr=tmpStr.Right(tmpStr.GetLength()-pos-1);
+
+		oneIndexInfoArr->Add(oneIndexInfo);
+	}
+
+	for(int i=0;i<oneIndexInfoArr->GetSize();i++)
+	{
+		tmpName=GetCatalogName(oneIndexInfoArr->GetAt(i));
+		tmpPath=GetPath(oneIndexInfoArr->GetAt(i));
+		pos=tmpPath.Find(servFloderPath);
+		if((pos==0)&&((tmpName.GetLength()+servFloderPath.GetLength()+1)==tmpPath.GetLength()))
+		{
+			indexInfo+=oneIndexInfoArr->GetAt(i);
+		}
+	}
+	if(indexInfo==_T(""))
+		indexInfo.Format(_T("%d+"),EMPTYCATALOG);
+	else
+	{
+		tmpStr=indexInfo;
+		indexInfo.Format(_T("%d+%s"),NONEMPTYCATALOG,tmpStr);
+	}
+	return indexInfo;
+}
+
+//获取路径名称
+CString CServIndex::GetPath(CString srcStr)
+{
+	if(srcStr==_T(""))
+		return _T("");
+	CString tmpName=GetCatalogName(srcStr);
+	CString tmpPath,tmpStr=srcStr;
+	int pos,iLength=0;
+	if(srcStr[0]==_T('D'))
+		iLength=4;
+	if(srcStr[0]==_T('F'))
+		iLength=2;
+	//获取目录路径
+	for(int i=0;i<iLength;i++)
+	{
+		pos=tmpStr.Find('|');
+		tmpStr=tmpStr.Right(tmpStr.GetLength()-pos-1);
+	}
+	pos=tmpStr.Find('|');
+	tmpPath=tmpStr.Left(pos);
+	return tmpPath;
+}
+//获取文件夹名
+CString CServIndex::GetCatalogName(CString srcStr)
+{
+	CString tmpStr;
+	if(srcStr==_T(""))
+		return _T("");
+
+	int pos=0,iLength=0;
+	tmpStr=srcStr;
+	if(srcStr[0]==_T('D'))
+		iLength=3;
+	if(srcStr[0]==_T('F'))
+		iLength=1;
+	for(int i=0;i<iLength;i++)
+	{
+		pos=tmpStr.Find('|');
+		tmpStr=tmpStr.Right(tmpStr.GetLength()-pos-1);
+	}
+
+	pos=tmpStr.Find('|');
+	return tmpStr.Left(pos);
+}
+
+//获取一条完整的文件或文件夹索引记录
+CString CServIndex::GetOneIndexInfo(CString srcStr,int &iPos)
+{
+	CString tmpStr;
+	if(srcStr==_T(""))
+		return _T("");
+
+	tmpStr=srcStr;
+	int pos=tmpStr.Find(';');
+	iPos=pos;
+
+	return tmpStr.Left(pos+1);
+}

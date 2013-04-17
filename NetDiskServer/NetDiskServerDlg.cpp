@@ -269,7 +269,7 @@ void CNetDiskServerDlg::OnBtnAdduser()
 
 		//添加用户目录索引文件
 		CServIndex userIndex;
-		if(!userIndex.CreateIndex(strAddUser))
+		if(!userIndex.UpdateIndex(strAddUser))
 		{
 			AfxMessageBox(_T("创建用户目录索引失败！"));
 			return ;
@@ -347,7 +347,9 @@ void CNetDiskServerDlg::OnBnClickedMfcbtnDeldeprt()
 {
 	// TODO: Add your control notification handler code here
 	CServIndex* tmpServIndex=new CServIndex();
-	tmpServIndex->CreateIndex(_T("user"));
+	CString userName=_T("user");
+	//CString indexStr=tmpServIndex->GetIndexInfo(userName);
+	tmpServIndex->UpdateIndex(_T("user"));
 	//tmpServIndex->FindSubCatalogAndFile(tmpServIndex->m_strRootPath+_T("user"),tmpServIndex->m_catalogIndexHead);
 	//tmpServIndex->UpdateIndex(tmpServIndex->m_strRootPath+_T("user"),tmpServIndex->m_catalogIndexHead);
 	//CString tmp=tmpServIndex->m_strIndexPath+_T("user.txt");

@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "Client.h"
-
+#include "locale.h"
+#include "NetdiskClient.h"
 
 Client::Client(void)
 {
@@ -119,6 +120,7 @@ void Client::SendMsgToServ(CString strMsg)
 
 	//sprintf( szTemp,("第1条信息：%s"),strMsg );
 	nBytesSend = send(m_Client.sock, szTemp, strlen(szTemp), 0);
+	Sleep(100);
 	if (SOCKET_ERROR == nBytesSend) 
 	{
 		CString tmpStr;
@@ -168,13 +170,65 @@ void Client::Clean()
 bool Client::UpdateClientCatalog(CString baseFolder)
 {
 	//将用户目录的根目录名发送给服务器，根目录名即为用户登录名
-	SendMsgToServ(baseFolder);
+	CString sendMsgStr;
+	sendMsgStr.Format(_T("%d+%s"),UPDATECLIENT,baseFolder);
+	SendMsgToServ(sendMsgStr);
 
 	//获取用户返回的目录信息
+	CString catalogIndexInfo;
 	int iResult;
 	char recvbuf[MAX_BUFFER_LEN];
 	int recvbuflen=MAX_BUFFER_LEN;
+	//CString m_StrIndexInfo;
+	//do 
+	//{
+		iResult=recv(m_Client.sock,recvbuf,recvbuflen,0);
+		Sleep(100);
+		if(0 == iResult)
+		{
+			AfxMessageBox(_T("Connection closed\n"));
+			return false;
+		}
+		//成功获取数据
+		if(iResult > 0)
+		{
+			recvbuf[iResult]='\0';
+			//m_StrIndexInfo=recvbuf;
+			//m_pMainDlg=(CNetdiskClientDlg*)(AfxGetMainWnd()->m_hWnd);
+			//m_pMainDlg->m_strIndexInfo=recvbuf;
+			((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo=recvbuf;
+			return true;
+		}
+		else
+		{
+			AfxMessageBox(_T("recv failed: %d\n"), WSAGetLastError());
+			return false;
+		}
+	//} while (iResult>0);
+
+		//setlocale( LC_CTYPE, ("chs"));
+		//CStdioFile sfile;
+		//sfile.Open(_T("C:\\test.txt"),CFile::modeWrite|CFile::modeCreate);
+		//sfile.WriteString(m_StrIndexInfo);
+		//sfile.Close();
+}
+
+//发送目录路径给服务器，服务器返回该目录下列表信息
+bool Client::GetCatalogInfo(CString FloderName)
+{
+	//发送目录路径给服务器 
+	CString sendMsgStr;
+	sendMsgStr.Format(_T("%d+%s"),GETCATALOGINFO,FloderName);
+	SendMsgToServ(sendMsgStr);
+
+	//获取用户返回的目录信息
+	CString catalogIndexInfo;
+	int iResult;
+	char recvbuf[MAX_BUFFER_LEN];
+	int recvbuflen=MAX_BUFFER_LEN;
+
 	iResult=recv(m_Client.sock,recvbuf,recvbuflen,0);
+
 	if(0 == iResult)
 	{
 		AfxMessageBox(_T("Connection closed\n"));
@@ -183,11 +237,18 @@ bool Client::UpdateClientCatalog(CString baseFolder)
 	//成功获取数据
 	if(iResult > 0)
 	{
-		
+		recvbuf[iResult]='\0';
+		//m_StrIndexInfo=recvbuf;
+		//m_pMainDlg=(CNetdiskClientDlg*)(AfxGetMainWnd()->m_hWnd);
+		//m_pMainDlg->m_strIndexInfo=recvbuf;
+		((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo=recvbuf;
+		return true;
 	}
 	else
 	{
-		AfxMessageBox(_T("recv failed: %d\n"), WSAGetLastError());
+		CString msgStr;
+		msgStr.Format(_T("recv failed,错误代码： %d\n"), WSAGetLastError());
+		AfxMessageBox(msgStr);
 		return false;
 	}
 }

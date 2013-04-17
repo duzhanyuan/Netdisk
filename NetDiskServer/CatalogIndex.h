@@ -14,6 +14,7 @@ public:
 	CString		m_strName;			//目录索引名称
 	CString		m_strPath;			//目录索引路径
 	CString		m_strEditTime;		//目录更改时间
+	CString		m_strParentCatalogName;//父目录名称
 	BOOL		m_bIsShare;			//是否共享
 	CString		m_strSharePath;		//共享路径
 	CFileIndex* m_subFile;			//子文件索引

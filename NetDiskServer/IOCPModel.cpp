@@ -1,5 +1,7 @@
 #include "StdAfx.h"
 #include "IOCPModel.h"
+#include "ServIndex.h"
+#include "locale.h"
 //#include "NetDiskServerDlg.h"
 
 // 每一个处理器上产生多少个线程(为了最大限度的提升服务器性能，详见配套文档)
@@ -132,7 +134,7 @@ DWORD WINAPI CIOCPModel::_WorkerThread(LPVOID lpParam)
 					
 				case SEND_POSTED:
 					{
-						//pIOCPModel->_DoSend(pSocketContext,pIoContext);
+						pIOCPModel->_DoSend(pSocketContext,pIoContext);
 					}
 					break;
 				default:
@@ -602,8 +604,39 @@ bool CIOCPModel::_DoRecv( PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pI
 {
 	// 先把上一次的数据显示出现，然后就重置状态，发出下一个Recv请求
 	SOCKADDR_IN* ClientAddr = &pSocketContext->m_ClientAddr;
-	this->_ShowMessage( _T("收到  %s:%d 信息：%s"),inet_ntoa(ClientAddr->sin_addr), ntohs(ClientAddr->sin_port),pIoContext->m_wsaBuf.buf );
- 
+	//this->_ShowMessage( _T("收到  %s:%d 信息：%s"),inet_ntoa(ClientAddr->sin_addr), ntohs(ClientAddr->sin_port),pIoContext->m_wsaBuf.buf );
+	CString oprMsg,useMsg;
+	oprMsg=pIoContext->m_wsaBuf.buf;
+	CServIndex* ServIndex=new CServIndex();
+
+	switch(UserOpr(oprMsg,useMsg))
+	{
+	case UPLOADFILE:
+		break;
+	case UPLOADCATLOG:
+		break;
+	case NEWFLODER:
+		break;
+	case MOVEFILE:
+		break;
+	case DELETEFILE:
+		break;
+	case DOWNLOAD:
+		break;
+	case REFRESH:
+		break;
+	case HISTROYVERSION:
+		break;
+	case GETCATALOGINFO:
+		m_StrIndexInfo=ServIndex->getCatalogInfo(useMsg);
+		_PostSend(pIoContext);
+		break;
+	case UPDATECLIENT:
+		m_StrIndexInfo=ServIndex->GetIndexInfo(useMsg);
+		_PostSend(pIoContext);
+		break;
+	
+	}
 	// 然后开始投递下一个WSARecv请求
 	return _PostRecv( pIoContext );
 }
@@ -613,24 +646,45 @@ bool CIOCPModel::_PostSend(PER_IO_CONTEXT* pIoContext)
 {
 	DWORD dwFlags = 0;
 	DWORD dwBytes =	0;
-	WSABUF *p_wbuf = &pIoContext->m_wsaBuf;
-	OVERLAPPED *p_ol = &pIoContext->m_Overlapped;
+	//WSABUF p_wbuf ;
+	//OVERLAPPED p_ol;
 
+	ZeroMemory(&pIoContext->m_Overlapped,sizeof(OVERLAPPED));
 	pIoContext->ResetBuffer();
 	pIoContext->m_OpType = SEND_POSTED;
 
-	//初始化完成，开始投递WSASend请求
-	int ret=WSASend(pIoContext->m_sockAccept,p_wbuf,1,&dwBytes,dwFlags,p_ol,NULL);
-	if((SOCKET_ERROR == ret) && (WSA_IO_PENDING != WSAGetLastError()))
-	{
-		AfxMessageBox(_T("投递WSASend失败！"));
-		return false;
-	}
+	int n=m_StrIndexInfo.GetLength();
+	int len=WideCharToMultiByte(CP_ACP,0,m_StrIndexInfo,m_StrIndexInfo.GetLength(),NULL,0,NULL,NULL);
+	WideCharToMultiByte(CP_ACP,0,m_StrIndexInfo,m_StrIndexInfo.GetLength()+1,pIoContext->m_wsaBuf.buf,len+1,NULL,NULL);
+	pIoContext->m_wsaBuf.buf[len]='\0';
+	pIoContext->m_wsaBuf.len=len;
 
+	//初始化完成，开始投递WSASend请求
+	//for(int i=0;i<5;i++)
+	//{
+		int ret=WSASend(pIoContext->m_sockAccept,&pIoContext->m_wsaBuf,1,&dwBytes,dwFlags,&pIoContext->m_Overlapped,NULL);
+		if((SOCKET_ERROR == ret) && (WSA_IO_PENDING != WSAGetLastError()))
+		{
+			AfxMessageBox(_T("投递WSASend失败！"));
+			return false;
+		}
+		//setlocale( LC_CTYPE, ("chs"));
+		//FILE* stream;
+		//fopen_s(&stream,"C:\\test.txt","w+t");
+		//fwrite(pIoContext->m_wsaBuf.buf,sizeof(char),pIoContext->m_wsaBuf.len,stream);
+		//fclose(stream);
+		//printf("Wrote %d bytes\n", dwBytes);
+//	}
+	//WSACleanup();
 	return true;
 }
 
-
+//////////////////////////////////////////////////////////////////////////
+//处理发送操作
+bool CIOCPModel::_DoSend(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext)
+{
+	return _PostRecv(pIoContext);
+}
 
 /////////////////////////////////////////////////////
 // 将句柄(Socket)绑定到完成端口中
@@ -894,4 +948,14 @@ int CIOCPModel::UserLogin(CString Userinfo)
 	}
 	db.Close();
 	return OTHER_ERROR;
+}
+
+int CIOCPModel::UserOpr(CString msgstr,CString &useMsg)
+{
+	int pos=msgstr.Find('+');
+	CString oprTyp=msgstr.Left(pos);
+	int iOprTyp=_ttoi(oprTyp);
+	useMsg=msgstr.Right(msgstr.GetLength()-pos-1);
+
+	return iOprTyp;
 }

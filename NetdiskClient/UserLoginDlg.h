@@ -11,7 +11,7 @@ public:
 	virtual ~CUserLoginDlg();
 
 // Dialog Data
-	enum { IDD = IDD_DIALOG1 };
+	enum { IDD = IDD_USERLONGINDLG };
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support

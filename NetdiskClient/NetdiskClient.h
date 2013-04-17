@@ -27,6 +27,8 @@ public:
 	virtual BOOL InitInstance();
 public:
 	SOCKET m_TmpClient;
+	CString m_loginName;
+	CString	m_strIndexInfo;
 // Implementation
 
 	DECLARE_MESSAGE_MAP()

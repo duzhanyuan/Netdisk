@@ -31,6 +31,25 @@ typedef enum _USERLOGIN_TYPE
 	LOGIN_SUCCESS,						//登录成功
 	OTHER_ERROR							//其他错误			
 }USERLOGIN_TYPE;
+typedef enum _USER_OPR_TYPE
+{
+	UPLOADFILE=4,						//上传文件
+	UPLOADCATLOG,						//上传文件夹
+	NEWFLODER,							//新建文件夹
+	DELETEFILE,							//删除
+	DOWNLOAD,							//下载
+	MOVEFILE,							//移动
+	REFRESH,							//刷新
+	HISTROYVERSION,						//历史版本
+	UPDATECLIENT,						//更新客户端显示
+	GETCATALOGINFO						//获取目录下的文件和文件夹列表
+}USER_OPR_TYPE;
+
+typedef enum _SERV_SEND_TYPE
+{
+	EMPTYCATALOG=14,					//发送非空目录信息
+	NONEMPTYCATALOG						//发送空目录信息
+}SERV_SEND_TYPE;
 //====================================================================================
 //
 //				单IO数据结构体定义(用于每一个重叠操作的参数)
@@ -213,7 +232,7 @@ protected:
 	bool _DoRecv( PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext );
 
 	//需要向客户端发送数据的时候，进行处理
-	//bool _DoSend(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext);
+	bool _DoSend(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext);
 
 	// 将客户端的相关信息存储到数组中
 	void _AddToContextList( PER_SOCKET_CONTEXT *pSocketContext );
@@ -244,6 +263,9 @@ protected:
 	
 	//用户连接判断是否存在该用户信息
 	int UserLogin(CString Userinfo);
+
+	//分解包头,判断用户操作类型
+	int UserOpr(CString msgstr,CString &useMsg);
 private:
 
 	HANDLE                       m_hShutdownEvent;              // 用来通知线程系统退出的事件，为了能够更好的退出线程
@@ -267,6 +289,8 @@ private:
 
 	LPFN_ACCEPTEX                m_lpfnAcceptEx;                // AcceptEx 和 GetAcceptExSockaddrs 的函数指针，用于调用这两个扩展函数
 	LPFN_GETACCEPTEXSOCKADDRS    m_lpfnGetAcceptExSockAddrs; 
+	
+	CString						 m_StrIndexInfo;
 
 };
 

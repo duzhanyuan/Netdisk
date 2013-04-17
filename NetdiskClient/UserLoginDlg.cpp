@@ -134,6 +134,7 @@ void CUserLoginDlg::OnBnClickedBtnLogin()
 	case LOGIN_SUCCESS:
 		////保存连接成功的socket
 		m_ndApp->m_TmpClient=m_Client.m_Client.sock;
+		m_ndApp->m_loginName=m_strName;
 		CDialog::OnOK();
 		break;
 	case -1:

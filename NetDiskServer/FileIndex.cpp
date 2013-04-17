@@ -13,6 +13,8 @@ CFileIndex::CFileIndex()
 	m_strName=_T("");
 	m_strPath=_T("");
 	m_strEditTime=_T("");
+	m_strFileSize=_T("");
+	m_strParentCatalogName=_T("");
 	m_bIsShare=FALSE;
 	m_strSharePath=_T("");
 	m_Next=NULL;
