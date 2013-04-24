@@ -135,6 +135,8 @@ BOOL CNetdiskClientDlg::OnInitDialog()
 	//将登录验证成功之后的连接socket赋给主程序
 	m_Client.m_Client.sock=((CNetdiskClientApp*)AfxGetApp())->m_TmpClient;
 	
+	m_pCatShowDlg=new CCatalogShowDlg();
+	m_pDateShowDlg=new CDateShowDlg();
 	//按目录显示以及按日期显示初始化
 	InitCatalogAndDateShow();
 
@@ -198,15 +200,16 @@ HCURSOR CNetdiskClientDlg::OnQueryDragIcon()
 //新建文件夹操作
 void CNetdiskClientDlg::OnBnClickedBtnNewfloder()
 {
-	// TODO: Add your control notification handler code here
-	m_Client.SendMsgToServ(_T("新建文件夹"));
+	DWORD dwStyle = m_lcFileShow.GetExtendedStyle();
+	dwStyle |= LVS_EDITLABELS;//可编辑
+	m_lcFileShow.SetExtendedStyle(dwStyle); //设置扩展风格
 }
 
 //删除操作
 void CNetdiskClientDlg::OnBnClickedBtnDelete()
 {
 	// TODO: Add your control notification handler code here
-	m_Client.SendMsgToServ(_T("删除"));
+	//m_Client.SendMsgToServ(_T("删除"));
 
 }
 
@@ -218,12 +221,12 @@ void CNetdiskClientDlg::OnTcnSelchangeTabCatalogue(NMHDR *pNMHDR, LRESULT *pResu
 	switch(m_tcCatalogShow.GetCurSel())
 	{
 	case 0:
-		m_catShowDlg.ShowWindow(SW_SHOW);
-		m_dateShowDlg.ShowWindow(SW_HIDE);
+		m_pCatShowDlg->ShowWindow(SW_SHOW);
+		m_pDateShowDlg->ShowWindow(SW_HIDE);
 		break;
 	case 1:
-		m_catShowDlg.ShowWindow(SW_HIDE);
-		m_dateShowDlg.ShowWindow(SW_SHOW);
+		m_pCatShowDlg->ShowWindow(SW_HIDE);
+		m_pDateShowDlg->ShowWindow(SW_SHOW);
 		break;
 	}
 	*pResult = 0;
@@ -234,8 +237,8 @@ void CNetdiskClientDlg::InitCatalogAndDateShow()
 	m_tcCatalogShow.InsertItem(0,_T("按目录查看"));
 	m_tcCatalogShow.InsertItem(1,_T("按日期查看"));
 
-	m_catShowDlg.Create(IDD_CATALOGSHOW,GetDlgItem(IDC_TAB_CATALOGUE));
-	m_dateShowDlg.Create(IDD_DATESHOW,GetDlgItem(IDC_TAB_CATALOGUE));
+	m_pCatShowDlg->Create(IDD_CATALOGSHOW,GetDlgItem(IDC_TAB_CATALOGUE));
+	m_pDateShowDlg->Create(IDD_DATESHOW,GetDlgItem(IDC_TAB_CATALOGUE));
 
 	CRect rc;
 	m_tcCatalogShow.GetClientRect(&rc);
@@ -243,16 +246,16 @@ void CNetdiskClientDlg::InitCatalogAndDateShow()
 	rc.bottom -= 1;
 	rc.left -= 1;
 	rc.right += 1;
-	m_catShowDlg.MoveWindow(&rc);
-	m_dateShowDlg.MoveWindow(&rc);
-	m_catShowDlg.ShowWindow(SW_SHOW);
-	m_dateShowDlg.ShowWindow(SW_HIDE);
+	m_pCatShowDlg->MoveWindow(&rc);
+	m_pDateShowDlg->MoveWindow(&rc);
+	m_pCatShowDlg->ShowWindow(SW_SHOW);
+	m_pDateShowDlg->ShowWindow(SW_HIDE);
 
 
 	if(m_Client.UpdateClientCatalog(m_strCurrentPath))
 	{
 		m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-		m_catShowDlg.UpdateCatalogShow(m_strIndexInfo);
+		m_pCatShowDlg->UpdateCatalogShow(m_strIndexInfo);
 
 	}
 	else
@@ -408,7 +411,7 @@ void CNetdiskClientDlg::OnNMDblclkListFile(NMHDR *pNMHDR, LRESULT *pResult)
 	int selItem=pNMItemActivate->iItem;
 	if(selItem!=-1)
 	{
-		m_strCurrentPath=m_catShowDlg.m_strCurrentPath;
+		m_strCurrentPath=m_pCatShowDlg->m_strCurrentPath;
 		if(m_lcFileShow.GetItemText(selItem,1)==_T(""))
 		{
 			m_strCurrentPath=m_strCurrentPath+_T("\\")+m_lcFileShow.GetItemText(selItem,0);
@@ -425,7 +428,7 @@ void CNetdiskClientDlg::OnNMDblclkListFile(NMHDR *pNMHDR, LRESULT *pResult)
 			{
 				m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
 				ShowFileList(m_strIndexInfo);
-				m_catShowDlg.SetSelectByFileListClick(m_strCurrentPath);
+				m_pCatShowDlg->SetSelectByFileListClick(m_strCurrentPath);
 			}
 		}
 	}
@@ -450,7 +453,7 @@ void CNetdiskClientDlg::OnBnClickedMfcbtnLastcatalog()
 	{
 		m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
 		ShowFileList(m_strIndexInfo);
-		m_catShowDlg.SetSelectByFileListClick(m_strCurrentPath);
+		m_pCatShowDlg->SetSelectByFileListClick(m_strCurrentPath);
 	}
 }
 
@@ -463,7 +466,7 @@ void CNetdiskClientDlg::OnBnClickedMfcbtnNextcatalog()
 	{
 		m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
 		ShowFileList(m_strIndexInfo);
-		m_catShowDlg.SetSelectByFileListClick(m_strCurrentPath);
+		m_pCatShowDlg->SetSelectByFileListClick(m_strCurrentPath);
 	}
 }
 

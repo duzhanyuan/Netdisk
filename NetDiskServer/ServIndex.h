@@ -2,31 +2,11 @@
 #include "FileIndex.h"
 #include "CatalogIndex.h"
 // CServIndex command target
-//////////////////////////////////////////////////////////////////////////
-//用户文件夹及共享文件夹的索引文件结构
-//文件索引结构
-//typedef struct _FileIndex
-//{
-//	CString name;		//文件名称
-//	CString path;		//文件路径
-//	CString editTime;	//文件更改时间
-//	BOOL isShare;		//是否共享
-//	CString sharePath;	//共享路径
-//	FileIndex* next;	//同级文件索引
-//}FileIndex;
-////目录索引结构
-// typedef struct _CatalogIndex
-//{
-//	CString name;			//目录索引名称
-//	CString path;			//目录索引路径
-//	CString editTime;		//目录更改时间
-//	BOOL isShare;			//是否共享
-//	CString sharePath;		//共享路径
-//	FileIndex* nextFile;	//子文件索引
-//	CatalogIndex* nextCatalog;//子目录索引
-//}CatalogIndex;
-//
-
+typedef enum _SERV_SEND_TYPE
+{
+	EMPTYCATALOG=14,					//发送非空目录信息
+	NONEMPTYCATALOG						//发送空目录信息
+}SERV_SEND_TYPE;
 
 class CServIndex : public CObject
 {

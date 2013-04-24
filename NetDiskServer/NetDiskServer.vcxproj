@@ -193,11 +193,12 @@
     <ClInclude Include="AdminLoginDlg.h" />
     <ClInclude Include="CatalogIndex.h" />
     <ClInclude Include="FileIndex.h" />
-    <ClInclude Include="IOCPModel.h" />
+    <ClInclude Include="FileTranfer.h" />
     <ClInclude Include="LoaclFileOpr.h" />
     <ClInclude Include="NetDiskServer.h" />
     <ClInclude Include="NetDiskServerDlg.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="ServerContrl.h" />
     <ClInclude Include="ServIndex.h" />
     <ClInclude Include="SetDeprtNameDlg.h" />
     <ClInclude Include="SetServDlg.h" />
@@ -210,10 +211,11 @@
     <ClCompile Include="AdminLoginDlg.cpp" />
     <ClCompile Include="CatalogIndex.cpp" />
     <ClCompile Include="FileIndex.cpp" />
-    <ClCompile Include="IOCPModel.cpp" />
+    <ClCompile Include="FileTranfer.cpp" />
     <ClCompile Include="LoaclFileOpr.cpp" />
     <ClCompile Include="NetDiskServer.cpp" />
     <ClCompile Include="NetDiskServerDlg.cpp" />
+    <ClCompile Include="ServerContrl.cpp" />
     <ClCompile Include="ServIndex.cpp" />
     <ClCompile Include="SetDeprtNameDlg.cpp" />
     <ClCompile Include="SetServDlg.cpp" />

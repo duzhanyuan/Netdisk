@@ -127,7 +127,7 @@ void CUserLoginDlg::OnBnClickedBtnLogin()
 		//		return;
 		//}
 	}
-	m_Client.SendMsgToServ(m_strName+_T(":")+m_strPasswd);
+	m_Client.SendMsgToServ(m_strName+_T(":")+m_strPasswd,LOGIN);
 
 	int retvalue=m_Client.RecvloginMsg();
 	switch(retvalue){

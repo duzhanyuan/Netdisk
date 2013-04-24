@@ -5,7 +5,6 @@
 #include "NetDiskServer.h"
 #include "ServIndex.h"
 #include "locale.h"
-#include "IOCPModel.h"
 // CServIndex
 
 CServIndex::CServIndex()
@@ -294,7 +293,8 @@ BOOL CServIndex::UpdateIndex(CString rootName)
 		//更新索引信息
 		UpdateIndexList(m_strRootPath+rootName,m_catalogIndexHead);
 		writeNextCatalogInfo(m_catalogIndexHead->m_subCatalog,&pStdioFile);
-		AfxMessageBox(_T("索引文件创建成功!"));
+		writeSubFileInfo(m_catalogIndexHead->m_subFile,&pStdioFile);
+		//AfxMessageBox(_T("索引文件创建成功!"));
 
 		pStdioFile.Close();
 		return TRUE;
@@ -422,7 +422,7 @@ void CServIndex::BuildSubCatalogAndFileList(CString rootPath,CCatalogIndex* root
 			CatalogIndexItem->m_strName=finder.GetFileName();
 			//CatalogIndexItem->m_strParentCatalogName=finder.GetRoot();
 			CatalogIndexItem->m_strPath=strTmpDir;
-			finder.GetLastAccessTime(tmpTime);
+			finder.GetLastWriteTime(tmpTime);
 			tmpStr = tmpTime.Format(_T("%c"));
 			_tprintf_s(_T("%s\n"), (LPCTSTR) tmpStr);
 			CatalogIndexItem->m_strEditTime=tmpStr;

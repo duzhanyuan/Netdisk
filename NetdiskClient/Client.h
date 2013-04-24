@@ -3,7 +3,8 @@
 #pragma warning(disable: 4996)
 
 // 缓冲区长度(8*1024字节)
-#define MAX_BUFFER_LEN 8196    
+#define MAX_BUFFER_LEN 1024*8
+#define	MAX_BUFFER_FILE_LEN	  1024*60
 #define DEFAULT_PORT          12345                      // 默认端口
 #define DEFAULT_IP            _T("127.0.0.1")            // 默认IP地址
 class CNetdiskClientDlg;
@@ -30,7 +31,8 @@ typedef enum _USERLOGIN_TYPE
 
 typedef enum _USER_OPR_TYPE
 {
-	UPLOADFILE=4,						//上传文件
+	LOGIN=1,							//用户登录
+	UPLOADFILE,						//上传文件
 	UPLOADCATLOG,						//上传文件夹
 	NEWFLODER,							//新建文件夹
 	DELETEFILE,							//删除
@@ -47,6 +49,18 @@ typedef enum _SERV_SEND_TYPE
 	EMPTYCATALOG=14,					//发送非空目录信息
 	NONEMPTYCATALOG						//发送空目录信息
 }SERV_SEND_TYPE;
+
+//发送的数据包
+typedef struct _DataPackage  
+{
+	int iType;        //
+	int nPackLen;
+	char sContent[ MAX_BUFFER_LEN ];            //数据包缓冲区
+	u_long nPosition;                //数据在文件中的位置
+	int nContentLen;                //数据字节数
+	//_FileInfor    FileInfor;        //文件信息
+}DataPackage;
+
 class Client
 {
 public:
@@ -59,9 +73,10 @@ public:
 	bool LoadSocketLib();
 	bool Start();
 	void Stop();
-	void SendMsgToServ(CString strMsg); //发送信息
+	void SendMsgToServ(CString strMsg,int sendType); //发送信息
 	int RecvloginMsg();						//获取登录验证信息
 	void Clean();
+	bool RecvReturnMsg();				//获取服务器返回信息
 public:
 	bool UpdateClient();				//更新客户端目录文件数据
 	bool UpdateClientCatalog(CString baseFolder);			//更新客户端目录信息
@@ -71,6 +86,7 @@ public:
 	bool MoveClientFile();						//移动文件
 	bool DownloadFile();						//下载文件
 	bool FindFile();							//查找文件
+	bool CreateNewFloder(CString baseFloder);	//新建文件夹
 public:
 public:
 	//CString m_strClientName;				//用户登录名

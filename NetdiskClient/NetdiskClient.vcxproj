@@ -99,12 +99,11 @@
     <None Include="res\NetdiskClient.rc2" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CatalogIndex.h" />
     <ClInclude Include="CatalogShowDlg.h" />
     <ClInclude Include="Client.h" />
     <ClInclude Include="DateShowDlg.h" />
-    <ClInclude Include="FileIndex.h" />
     <ClInclude Include="FileUploadDlg.h" />
+    <ClInclude Include="HyperLink.h" />
     <ClInclude Include="NetdiskClient.h" />
     <ClInclude Include="NetdiskClientDlg.h" />
     <ClInclude Include="Resource.h" />
@@ -113,12 +112,11 @@
     <ClInclude Include="UserLoginDlg.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CatalogIndex.cpp" />
     <ClCompile Include="CatalogShowDlg.cpp" />
     <ClCompile Include="Client.cpp" />
     <ClCompile Include="DateShowDlg.cpp" />
-    <ClCompile Include="FileIndex.cpp" />
     <ClCompile Include="FileUploadDlg.cpp" />
+    <ClCompile Include="HyperLink.cpp" />
     <ClCompile Include="NetdiskClient.cpp" />
     <ClCompile Include="NetdiskClientDlg.cpp" />
     <ClCompile Include="stdafx.cpp">

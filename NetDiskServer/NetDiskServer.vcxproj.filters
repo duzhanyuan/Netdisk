@@ -48,9 +48,6 @@
     <ClInclude Include="AddNewUserDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="IOCPModel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ServIndex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -67,6 +64,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ShareFileOpr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FileTranfer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerContrl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -92,9 +95,6 @@
     <ClCompile Include="AddNewUserDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="IOCPModel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ServIndex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -108,6 +108,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ShareFileOpr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FileTranfer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerContrl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

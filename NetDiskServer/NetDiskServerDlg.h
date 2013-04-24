@@ -3,7 +3,8 @@
 //
 
 #pragma once
-#include "IOCPModel.h"
+//#include "IOCPModel.h"
+#include "ServerContrl.h"
 
 class CSetDeprtNameDlg;
 
@@ -42,7 +43,8 @@ public:
 	CSetDeprtNameDlg* m_pAddNewDeprt;
 	HTREEITEM m_hCurrent;//当前选中的节点
 	int m_iServControl;
-	CIOCPModel m_iocp;
+//	CIOCPModel m_iocp;
+	CServerContrl m_ServContrl;
 
 public:
 	BOOL ShowDeprtDbInfo();

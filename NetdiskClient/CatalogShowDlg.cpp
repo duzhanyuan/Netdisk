@@ -87,14 +87,14 @@ void CCatalogShowDlg::UpdateCatalogShow(CString indexInfo)
 	CString tmpStr ;
 	int pos,totalNum;
 
-	pos=indexInfo.Find('+');
-	tmpStr=indexInfo.Left(pos);
-	if(_ttoi(tmpStr)==EMPTYCATALOG)
-		return;
-	else
-		tmpStr=indexInfo.Right(indexInfo.GetLength()-pos-1);
+	//pos=indexInfo.Find('+');
+	//tmpStr=indexInfo.Left(pos);
+	//if(_ttoi(tmpStr)==EMPTYCATALOG)
+	//	return;
+	//else
+	//	tmpStr=indexInfo.Right(indexInfo.GetLength()-pos-1);
 	//catalogRootArr->Add(m_MyDisk);
-
+	tmpStr=indexInfo;
 	while(tmpStr.GetLength()>0)
 	{
 		oneIndexInfo=GetOneIndexInfo(tmpStr,pos);
@@ -108,7 +108,7 @@ void CCatalogShowDlg::UpdateCatalogShow(CString indexInfo)
 	
 	}
 
-	totalNum=oneIndexInfoArr->GetSize();
+	totalNum=oneIndexInfoArr->GetCount();
 	HTREEITEM root=m_CatalogShow.InsertItem(GetCatalogName(oneIndexInfoArr->GetAt(0)),m_MyDisk);
 	catalogRootArr->Add(root);
 	bool flag;

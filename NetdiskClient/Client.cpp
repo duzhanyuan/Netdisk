@@ -26,6 +26,32 @@ bool Client::ConnectToServ(SOCKET *pSocket,CString Serveraddr,int port)
 		return false;
 	}
 
+	//获取系统默认的发送数据缓冲区大小
+	unsigned int uiRcvBuf;
+	int uiRcvBufLen = sizeof(uiRcvBuf);
+	int nErrCode= getsockopt(m_Client.sock, SOL_SOCKET, SO_SNDBUF,(char*)&uiRcvBuf, &uiRcvBufLen);
+	if (SOCKET_ERROR == nErrCode)
+	{
+		return false;
+	}
+
+	//设置系统发送数据缓冲区为默认值的BUF_TIMES倍
+	uiRcvBuf *= 10;
+	nErrCode = setsockopt(m_Client.sock, SOL_SOCKET, SO_SNDBUF,(char*)&uiRcvBuf, uiRcvBufLen);
+	if (SOCKET_ERROR == nErrCode)
+	{
+		AfxMessageBox(_T("修改系统发送数据缓冲区失败！"));
+	}
+
+
+	//检查设置系统发送数据缓冲区是否成功
+	unsigned int uiNewRcvBuf;
+	getsockopt(m_Client.sock, SOL_SOCKET, SO_SNDBUF,(char*)&uiNewRcvBuf, &uiRcvBufLen);
+	if (SOCKET_ERROR == nErrCode || uiNewRcvBuf != uiRcvBuf)
+	{
+		AfxMessageBox(_T("修改系统发送数据缓冲区失败！"));;
+	}
+
 	char* pAddr;
 	int len = Serveraddr.GetLength(); 
 	pAddr = (char*)malloc((len*2+1)*sizeof(char));
@@ -105,22 +131,25 @@ void Client::Stop()
 
 }
 
-void Client::SendMsgToServ(CString strMsg)
+void Client::SendMsgToServ(CString strMsg,int sendType)
 {
-	char szTemp[MAX_BUFFER_LEN];
+	/*char szTemp[MAX_BUFFER_LEN];*/
 	//memset( szTemp,0,sizeof(szTemp) );
+	DataPackage sendPack;
+	ZeroMemory(&sendPack,sizeof(sendPack));
+	
 	int nBytesSend=0;
 	// 向服务器发送信息
-	int len = strMsg.GetLength(); 
-	//szTemp = (char*)malloc((len*2+1)*sizeof(char));
-	//CString的长度中汉字算一个长度 
-	memset(szTemp, 0, 2*len+1); 
-	USES_CONVERSION; 
-	strcpy((LPSTR)szTemp,OLE2A(strMsg.LockBuffer()));
-
-	//sprintf( szTemp,("第1条信息：%s"),strMsg );
-	nBytesSend = send(m_Client.sock, szTemp, strlen(szTemp), 0);
-	Sleep(100);
+	int n=strMsg.GetLength();
+	int len=WideCharToMultiByte(CP_ACP,0,strMsg,strMsg.GetLength(),NULL,0,NULL,NULL);
+	WideCharToMultiByte(CP_ACP,0,strMsg,strMsg.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
+	sendPack.sContent[len]='\0';
+	sendPack.nContentLen=len;
+	sendPack.nPackLen=sizeof(sendPack);
+	sendPack.iType=sendType;
+	
+	nBytesSend = send(m_Client.sock, (char*)&sendPack, sendPack.nPackLen, 0);
+//	Sleep(10);
 	if (SOCKET_ERROR == nBytesSend) 
 	{
 		CString tmpStr;
@@ -135,9 +164,12 @@ void Client::SendMsgToServ(CString strMsg)
 int Client::RecvloginMsg()
 {
 	int iResult;
-	char recvbuf[MAX_BUFFER_LEN];
-	int recvbuflen=MAX_BUFFER_LEN;
-	iResult=recv(m_Client.sock,recvbuf,recvbuflen,0);
+	//char recvbuf[MAX_BUFFER_LEN];
+	//int recvbuflen=MAX_BUFFER_LEN;
+	DataPackage recvPack;
+	recvPack.nPackLen=sizeof(recvPack);
+
+	iResult=recv(m_Client.sock,(char*)&recvPack,recvPack.nPackLen,0);
 	if(0 == iResult)
 	{
 		AfxMessageBox(_T("Connection closed\n"));
@@ -145,8 +177,7 @@ int Client::RecvloginMsg()
 	}
 	if(iResult > 0)
 	{
-		
-		return atoi(recvbuf);
+		return atoi(recvPack.sContent);
 	}
 	else
 	{
@@ -170,20 +201,61 @@ void Client::Clean()
 bool Client::UpdateClientCatalog(CString baseFolder)
 {
 	//将用户目录的根目录名发送给服务器，根目录名即为用户登录名
-	CString sendMsgStr;
-	sendMsgStr.Format(_T("%d+%s"),UPDATECLIENT,baseFolder);
-	SendMsgToServ(sendMsgStr);
+	SendMsgToServ(baseFolder,UPDATECLIENT);
+	//获取返回信息
+	if(!RecvReturnMsg())
+	{
+		AfxMessageBox(_T("获取返回信息失败！"));
+		return false;
+	}
+	return true;
+}
 
+//发送目录路径给服务器，服务器返回该目录下列表信息
+bool Client::GetCatalogInfo(CString FloderName)
+{
+	//发送目录路径给服务器 
+//	CString sendMsgStr;
+	//sendMsgStr.Format(_T("%d+%s"),GETCATALOGINFO,FloderName);
+	SendMsgToServ(FloderName,GETCATALOGINFO);
+
+	//获取返回信息
+	if(!RecvReturnMsg())
+	{
+		AfxMessageBox(_T("获取返回信息失败！"));
+		return false;
+	}
+	return true;
+}
+
+bool Client::CreateNewFloder(CString baseFloder)
+{
+	//发送操作信息到服务器
+	SendMsgToServ(baseFloder,NEWFLODER);
+	//获取返回信息
+	if(!RecvReturnMsg())
+	{
+		AfxMessageBox(_T("获取返回信息失败！"));
+		return false;
+	}
+	return true;
+}
+
+bool Client::RecvReturnMsg()
+{
 	//获取用户返回的目录信息
-	CString catalogIndexInfo;
+	//CString catalogIndexInfo;
 	int iResult;
-	char recvbuf[MAX_BUFFER_LEN];
-	int recvbuflen=MAX_BUFFER_LEN;
+	//char recvbuf[MAX_BUFFER_LEN];
+	//int recvbuflen=MAX_BUFFER_LEN;
+	DataPackage recvPack;
+	ZeroMemory(&recvPack,sizeof(recvPack));
+	
 	//CString m_StrIndexInfo;
 	//do 
 	//{
-		iResult=recv(m_Client.sock,recvbuf,recvbuflen,0);
-		Sleep(100);
+		iResult=recv(m_Client.sock,(char*)&recvPack,sizeof(recvPack),0);
+		Sleep(10);
 		if(0 == iResult)
 		{
 			AfxMessageBox(_T("Connection closed\n"));
@@ -192,63 +264,14 @@ bool Client::UpdateClientCatalog(CString baseFolder)
 		//成功获取数据
 		if(iResult > 0)
 		{
-			recvbuf[iResult]='\0';
-			//m_StrIndexInfo=recvbuf;
-			//m_pMainDlg=(CNetdiskClientDlg*)(AfxGetMainWnd()->m_hWnd);
-			//m_pMainDlg->m_strIndexInfo=recvbuf;
-			((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo=recvbuf;
+			((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo=recvPack.sContent;
 			return true;
 		}
 		else
 		{
-			AfxMessageBox(_T("recv failed: %d\n"), WSAGetLastError());
+			CString msgStr;
+			msgStr.Format(_T("recv failed,错误代码： %d\n"), WSAGetLastError());
+			AfxMessageBox(msgStr);
 			return false;
 		}
-	//} while (iResult>0);
-
-		//setlocale( LC_CTYPE, ("chs"));
-		//CStdioFile sfile;
-		//sfile.Open(_T("C:\\test.txt"),CFile::modeWrite|CFile::modeCreate);
-		//sfile.WriteString(m_StrIndexInfo);
-		//sfile.Close();
-}
-
-//发送目录路径给服务器，服务器返回该目录下列表信息
-bool Client::GetCatalogInfo(CString FloderName)
-{
-	//发送目录路径给服务器 
-	CString sendMsgStr;
-	sendMsgStr.Format(_T("%d+%s"),GETCATALOGINFO,FloderName);
-	SendMsgToServ(sendMsgStr);
-
-	//获取用户返回的目录信息
-	CString catalogIndexInfo;
-	int iResult;
-	char recvbuf[MAX_BUFFER_LEN];
-	int recvbuflen=MAX_BUFFER_LEN;
-
-	iResult=recv(m_Client.sock,recvbuf,recvbuflen,0);
-
-	if(0 == iResult)
-	{
-		AfxMessageBox(_T("Connection closed\n"));
-		return false;
-	}
-	//成功获取数据
-	if(iResult > 0)
-	{
-		recvbuf[iResult]='\0';
-		//m_StrIndexInfo=recvbuf;
-		//m_pMainDlg=(CNetdiskClientDlg*)(AfxGetMainWnd()->m_hWnd);
-		//m_pMainDlg->m_strIndexInfo=recvbuf;
-		((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo=recvbuf;
-		return true;
-	}
-	else
-	{
-		CString msgStr;
-		msgStr.Format(_T("recv failed,错误代码： %d\n"), WSAGetLastError());
-		AfxMessageBox(msgStr);
-		return false;
-	}
 }

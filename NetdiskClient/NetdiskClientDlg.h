@@ -15,6 +15,8 @@ typedef struct _HistroyPath
 	struct _HistroyPath* next;
 }HistroyPath;
 
+
+
 // CNetdiskClientDlg dialog
 class CNetdiskClientDlg : public CDialogEx
 {
@@ -42,8 +44,8 @@ protected:
 public:
 	CMFCMenuButton	m_mbUpload;
 	Client			m_Client;
-	CCatalogShowDlg m_catShowDlg;
-	CDateShowDlg	m_dateShowDlg;
+	CCatalogShowDlg* m_pCatShowDlg;
+	CDateShowDlg*	m_pDateShowDlg;
 	CString			m_strUserLoginName;
 	CString			m_strIndexInfo;
 	HistroyPath*	m_HistroyPathArr;

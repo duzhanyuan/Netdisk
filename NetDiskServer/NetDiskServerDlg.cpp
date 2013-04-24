@@ -318,7 +318,7 @@ void CNetDiskServerDlg::OnBnClickedMfcbtnServcontrol()
 		GetDlgItem(IDC_MFCBTN_ADDUSER)->EnableWindow(FALSE);
 
 		//启动服务器
-		if(!m_iocp.Start())
+		if(!m_ServContrl.StartServ())
 		{
 			AfxMessageBox(_T("启动服务器失败！"));
 			return;
@@ -336,7 +336,7 @@ void CNetDiskServerDlg::OnBnClickedMfcbtnServcontrol()
 		GetDlgItem(IDC_MFCBTN_SERVCONTROL)->SetWindowText(_T("启动服务器"));
 		m_iServControl=0;
 
-		m_iocp.Stop();
+		m_ServContrl.StopServ();
 		return;
 	}
 

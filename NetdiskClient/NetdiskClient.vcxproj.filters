@@ -51,13 +51,10 @@
     <ClInclude Include="DateShowDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CatalogIndex.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FileIndex.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="FileUploadDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HyperLink.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -83,13 +80,10 @@
     <ClCompile Include="DateShowDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CatalogIndex.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FileIndex.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="FileUploadDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HyperLink.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
