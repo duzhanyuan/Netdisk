@@ -8,7 +8,7 @@
 #include "NetdiskClientDlg.h"
 
 char Buffer[MAX_BUFFER_LEN];
-
+#define TIMER 1 
 // CFileUploadDlg dialog
 
 IMPLEMENT_DYNAMIC(CFileUploadDlg, CDialogEx)
@@ -16,7 +16,9 @@ IMPLEMENT_DYNAMIC(CFileUploadDlg, CDialogEx)
 CFileUploadDlg::CFileUploadDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(CFileUploadDlg::IDD, pParent)
 {
-
+	m_ulFileSize = 0;
+	m_ulCurTotal = 0;
+	m_iAddFileCount = 0;
 }
 
 CFileUploadDlg::~CFileUploadDlg()
@@ -35,6 +37,7 @@ void CFileUploadDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CFileUploadDlg, CDialogEx)
 	ON_STN_CLICKED(IDC_STATIC_CLEANLIST, &CFileUploadDlg::OnStnClickedStaticCleanlist)
 	ON_WM_MOUSEMOVE()
+	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_BTN_ADDFILE, &CFileUploadDlg::OnBnClickedBtnAddfile)
 	ON_BN_CLICKED(IDC_BTN_UPLOAD, &CFileUploadDlg::OnBnClickedBtnUpload)
 END_MESSAGE_MAP()
@@ -73,6 +76,8 @@ void CFileUploadDlg::InitUploadFileList()
 	m_lcUploadFile.InsertColumn(1,_T("大小"),LVCFMT_CENTER,150);
 	m_lcUploadFile.InsertColumn(2,_T("状态"),LVCFMT_CENTER,150);
 
+	m_lcUploadFile.SetImageList(&m_pMainDlg->m_cSysIcon.m_ImageSmallList,LVSIL_SMALL);
+
 }
 
 BOOL CFileUploadDlg::OnInitDialog()
@@ -80,21 +85,26 @@ BOOL CFileUploadDlg::OnInitDialog()
 	CDialogEx::OnInitDialog();
 
 	// TODO:  Add extra initialization here
-	InitUploadFileList();
-	m_UploadProg.ShowWindow(SW_HIDE);
-
-	//m_pFileUploadArr=new CArray<CString,CString&>();
-	m_pFileUploadMap=new CMap<CString, LPCTSTR, CString, LPCTSTR>();
-
 	//获取主程序对话框句柄
 	m_pMainDlg=((CNetdiskClientDlg*)AfxGetMainWnd());
 	//获取socket
 	m_Client=m_pMainDlg->m_Client;
 	m_Client.m_Client.sock=((CNetdiskClientApp*)AfxGetApp())->m_TmpClient;
 
+
+	InitUploadFileList();
+	m_UploadProg.ShowWindow(SW_HIDE);
+
+	//m_pFileUploadArr=new CArray<CString,CString&>();
+	m_pFileUploadMap=new CMap<CString, LPCTSTR, CString, LPCTSTR>();
+
+	
 	//重绘static text，设置清空listview的功能
 	m_pClearList.Attach(GetDlgItem(IDC_STATIC_CLEANLIST)->GetSafeHwnd());
 	m_pClearList.m_pFileUploadDlg=this;
+
+	SetTimer(TIMER,10,NULL);
+
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
 }
@@ -136,9 +146,29 @@ void CFileUploadDlg::OnBnClickedBtnAddfile()
 	{
 		if(!IfFileAdded(strFileName))
 		{
-			int nRow=m_lcUploadFile.InsertItem(0,strFileName);
-			m_lcUploadFile.SetItemText(nRow,1,strFileSize);
-			m_lcUploadFile.SetItemText(nRow,2,_T("准备上传"));
+			int nType=m_pMainDlg->m_cSysIcon.GetExtIconID(strFileName);
+			//插入数据
+			LVITEM lvi;
+			CString strItem;
+
+			lvi.mask = TVIF_TEXT|TVIF_IMAGE;
+			lvi.iItem = m_iAddFileCount;
+			lvi.iSubItem = 0;
+			lvi.pszText =(LPTSTR)(LPCTSTR)strFileName;
+			lvi.iImage = nType;		
+			m_lcUploadFile.InsertItem(&lvi);
+
+			lvi.iSubItem =1;
+			lvi.pszText = (LPTSTR)(LPCTSTR)strFileSize;
+			m_lcUploadFile.SetItem(&lvi);
+
+			lvi.iSubItem =2;
+			lvi.pszText = (LPTSTR)(LPCTSTR)_T("准备上传");
+			m_lcUploadFile.SetItem(&lvi);
+			//int nRow=m_lcUploadFile.InsertItem(0,strFileName);
+			//m_lcUploadFile.SetItemText(nRow,1,strFileSize);
+			//m_lcUploadFile.SetItemText(nRow,2,_T("准备上传"));
+			m_iAddFileCount++;
 		}
 		else
 			AfxMessageBox(_T("文件已经添加！"));
@@ -162,6 +192,7 @@ bool CFileUploadDlg::IfFileAdded(CString fileName)
 void CFileUploadDlg::OnBnClickedBtnUpload()
 {
 	// TODO: Add your control notification handler code here
+
 	int count=0;
 	for(int i=0;i<m_lcUploadFile.GetItemCount();i++)
 	{
@@ -173,7 +204,6 @@ void CFileUploadDlg::OnBnClickedBtnUpload()
 		AfxMessageBox(_T("请先选择要上传的文件！"));
 		return;
 	}
-	u_long totalSize=0;
 	//根据文件大小，设置进度条的范围
 	for(int i=0;i<m_lcUploadFile.GetItemCount();i++)
 	{
@@ -184,25 +214,56 @@ void CFileUploadDlg::OnBnClickedBtnUpload()
 			m_pFileUploadMap->Lookup(m_lcUploadFile.GetItemText(i,0),strPath);
 			HANDLE hFile = CreateFile(strPath, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL); 		
 			fileSize=GetFileSize(hFile,NULL);
-			totalSize+=fileSize;
+			m_ulFileSize+=fileSize;
 			CloseHandle(hFile);
 		}
 	}
 	m_btnUpload.EnableWindow(FALSE);	
-	m_UploadProg.ShowWindow(SW_SHOW);
-	m_UploadProg.SetRange(0,totalSize);
-	u_long tmpTotalSize=0;
+	//m_UploadProg.ShowWindow(SW_SHOW);
+	//m_UploadProg.SetRange(0,totalSize);
+	//u_long tmpTotalSize=0;
+
+	m_pThreadWorker.cSocket=m_Client.m_Client.sock;
+	m_pThreadWorker.pFileULDlg=this;
+	m_pThreadWorker.pListCtrl=&m_lcUploadFile;
+	m_pThreadWorker.pClient=&m_Client;
+	m_pThreadWorker.pMainDlg=m_pMainDlg;
+
+	//创建发送文件线程
+	HANDLE hSend=CreateThread(0,0,UploadThread,&m_pThreadWorker,0,0);
+	CloseHandle(hSend);
+
+	//循环等待线程的结束
+	//while(1)
+	//{
+	//	if(m_bUploadThread)
+	//		break;
+	//}
+	//重置界面显示
+	//ResetCurFileDL();
+	
+}
+
+DWORD WINAPI CFileUploadDlg::UploadThread(LPVOID lpParam)
+{
+	THREADWORKER* threadWorker=(THREADWORKER*)lpParam;
+	CNetdiskClientDlg* pMainDlg=threadWorker->pMainDlg;
+	Client* pClient=threadWorker->pClient;
+	CListCtrl* pListCtrl=threadWorker->pListCtrl;
+	SOCKET cSocket=threadWorker->cSocket;
+	CFileUploadDlg* pFileULDlg=threadWorker->pFileULDlg;
+
 
 	//传送文件
-	for(int i=0;i<m_lcUploadFile.GetItemCount();i++)
+	for(int i=0;i<pListCtrl->GetItemCount();i++)
 	{
-		if(m_lcUploadFile.GetCheck(i))
+		if(pListCtrl->GetCheck(i))
 		{
-			
+
 			//发送文件路径信息
 			int result;
 			CString	pathName;
-			pathName=m_pMainDlg->m_strCurrentPath+_T("\\")+m_lcUploadFile.GetItemText(i,0);
+			pathName=pMainDlg->m_strCurrentPath+_T("\\")+pListCtrl->GetItemText(i,0);
 			DataPackage sendPack;
 			ZeroMemory(&sendPack,sizeof(sendPack));
 			sendPack.nPackLen=sizeof(sendPack);
@@ -212,18 +273,18 @@ void CFileUploadDlg::OnBnClickedBtnUpload()
 			WideCharToMultiByte(CP_ACP,0,pathName,pathName.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
 			sendPack.sContent[len]='\0';
 			sendPack.nContentLen=len;
-			result=send(m_Client.m_Client.sock,(char*)&sendPack,sendPack.nPackLen,0);
+			result=send(cSocket,(char*)&sendPack,sendPack.nPackLen,0);
 			if(result==SOCKET_ERROR)
 			{
 				AfxMessageBox(_T("发送文件信息失败！"));
 			}
-			
+
 			//发送文件数据
 			FILE* infile;
 			char c_path[1024];
 			//CString path=m_pFileUploadArr->GetAt(i);
 			CString path;
-			m_pFileUploadMap->Lookup(m_lcUploadFile.GetItemText(i,0),path);
+			pFileULDlg->m_pFileUploadMap->Lookup(pListCtrl->GetItemText(i,0),path);
 			memset(c_path,0,path.GetLength()*2+1);
 			USES_CONVERSION; 
 			strcpy((LPSTR)c_path,OLE2A(path.LockBuffer()));
@@ -243,7 +304,7 @@ void CFileUploadDlg::OnBnClickedBtnUpload()
 				CopyMemory(sendPack.sContent,Buffer,ulFileRead);
 				sendPack.nPosition=ulFlagCount;
 
-				result=send(m_Client.m_Client.sock,(char*)&sendPack,sendPack.nPackLen,0);
+				result=send(cSocket,(char*)&sendPack,sendPack.nPackLen,0);
 				Sleep(1);
 				if(result==SOCKET_ERROR)
 				{
@@ -252,10 +313,10 @@ void CFileUploadDlg::OnBnClickedBtnUpload()
 				else
 				{
 					ulFlagCount+=ulFileRead;
-					tmpTotalSize+=ulFileRead;
+					pFileULDlg->m_ulCurTotal+=ulFileRead;
 				}
 				//进度条显示
-				m_UploadProg.SetPos(tmpTotalSize);
+				//m_UploadProg.SetPos(tmpTotalSize);
 			}
 
 			fclose(infile);
@@ -268,27 +329,51 @@ void CFileUploadDlg::OnBnClickedBtnUpload()
 			WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
 			sendPack.sContent[len]='\0';
 			sendPack.nContentLen=len;
-			result=send(m_Client.m_Client.sock,(char*)&sendPack,sendPack.nPackLen,0);
+			result=send(cSocket,(char*)&sendPack,sendPack.nPackLen,0);
 			if(result==SOCKET_ERROR)
 			{
 				AfxMessageBox(_T("发送文件结束包失败！"));
 			}
 			//更新文件状态
-			m_lcUploadFile.SetItemText(i,2,_T("上传成功"));
-
-
+			pListCtrl->SetItemText(i,2,_T("上传成功"));
 			//更新客户端信息
-			if(m_Client.GetCatalogInfo(m_pMainDlg->m_strCurrentPath))
+			if(pClient->GetCatalogInfo(pMainDlg->m_strCurrentPath))
 			{
-				m_pMainDlg->m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-				m_pMainDlg->ShowFileList(m_pMainDlg->m_strIndexInfo);
+				pMainDlg->m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
+				pMainDlg->ShowFileList(pMainDlg->m_strIndexInfo);
 			}
 		}
 
 	}
+	pFileULDlg->ResetCurFileDL();
+	return 0;
+}
+/*
+ * 更新进度条
+ */
+void CFileUploadDlg::OnTimer(UINT nIDEvent) 
+{
+	if (m_ulCurTotal > 0)//当前下载文件的字节数
+	{
+		int nPercent = (float)m_ulCurTotal / m_ulFileSize * 100;//百分比
+		m_UploadProg.SetPos(nPercent);							//设置进度条位置
+		
+		m_UploadProg.ShowWindow(SW_SHOW );						//显示进度条
+		
+	}
 
-	m_btnUpload.EnableWindow(TRUE);	
+	CDialog::OnTimer(nIDEvent);
+}
+
+/*
+ * 隐藏进度条控件
+ */
+void CFileUploadDlg::ResetCurFileDL(void)
+{
+	m_ulCurTotal = 0;
+	m_UploadProg.SetPos(0);
 	m_UploadProg.ShowWindow(SW_HIDE);
+	m_btnUpload.EnableWindow(TRUE);	
 	//清空列表的选中状态
 	for(int i=0;i<m_lcUploadFile.GetItemCount();i++)
 	{

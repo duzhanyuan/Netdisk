@@ -540,7 +540,8 @@ CString CServIndex::GetIndexInfo(CString &rootName)
 		pStdioFile.Close();
 		return strIndexText;
 	}
-	return NULL;
+	else
+		return NULL;
 }
 
 //获取某一个目录下的文件和文件夹信息

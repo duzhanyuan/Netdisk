@@ -102,12 +102,16 @@
     <ClInclude Include="CatalogShowDlg.h" />
     <ClInclude Include="Client.h" />
     <ClInclude Include="DateShowDlg.h" />
+    <ClInclude Include="DownLoadDlg.h" />
     <ClInclude Include="FileUploadDlg.h" />
     <ClInclude Include="HyperLink.h" />
+    <ClInclude Include="MoveFileDlg.h" />
     <ClInclude Include="NetdiskClient.h" />
     <ClInclude Include="NetdiskClientDlg.h" />
+    <ClInclude Include="NewFloderDlg.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="SysIcon.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UserLoginDlg.h" />
   </ItemGroup>
@@ -115,14 +119,18 @@
     <ClCompile Include="CatalogShowDlg.cpp" />
     <ClCompile Include="Client.cpp" />
     <ClCompile Include="DateShowDlg.cpp" />
+    <ClCompile Include="DownLoadDlg.cpp" />
     <ClCompile Include="FileUploadDlg.cpp" />
     <ClCompile Include="HyperLink.cpp" />
+    <ClCompile Include="MoveFileDlg.cpp" />
     <ClCompile Include="NetdiskClient.cpp" />
     <ClCompile Include="NetdiskClientDlg.cpp" />
+    <ClCompile Include="NewFloderDlg.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="SysIcon.cpp" />
     <ClCompile Include="UserLoginDlg.cpp" />
   </ItemGroup>
   <ItemGroup>

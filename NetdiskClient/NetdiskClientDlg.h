@@ -7,7 +7,7 @@
 #include "CatalogShowDlg.h"
 #include "DateShowDlg.h"
 #include "resource.h"
-
+#include "SysIcon.h"
 //历史路径结构体
 typedef struct _HistroyPath
 {
@@ -51,6 +51,8 @@ public:
 	HistroyPath*	m_HistroyPathArr;
 	HistroyPath*	m_pHisPathHead;
 	HistroyPath*	m_pHisPathTail;
+	CSysIcon m_cSysIcon;
+
 	//int				m_iHistroyFlag;
 	//CString			m_strCurrentPath;
 public:
@@ -74,4 +76,16 @@ public:
 	CString m_strCurrentPath;
 	CMFCButton m_btnUpload;
 	afx_msg void OnBnClickedBtnUploadfile();
+	afx_msg void OnBnClickedBtnRefresh();
+	afx_msg void OnBnClickedBtnDownload();
+	afx_msg void OnBnClickedBtnMove();
+	/*CMFCButton m_btnShowIcon;
+	CMFCButton m_btnShowList;*/
+	afx_msg void OnBnClickedMfcbtnShowlist();
+	afx_msg void OnBnClickedMfcbtnShowicon();
+	afx_msg void OnBnClickedBtnShowlist();
+	CButton m_btnShowIcon;
+	CButton m_btnShowList;
+	afx_msg void OnBnClickedBtnShowicon();
+	afx_msg void OnBnClickedBtnRecycle();
 };

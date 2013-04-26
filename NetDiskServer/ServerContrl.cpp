@@ -6,14 +6,20 @@
 #include "ServerContrl.h"
 #include "ServIndex.h"
 
+char Buffer[MAX_BUFFER_LEN];
+
 // CServerContrl
 
 CServerContrl::CServerContrl()
 {
+	m_strDiskRootPath=_T("E:\\企业网盘目录");
+	InitializeCriticalSection(&m_csFile);
+
 }
 
 CServerContrl::~CServerContrl()
 {
+	DeleteCriticalSection(&m_csFile);
 }
 
 bool CServerContrl::InitSocket()
@@ -134,7 +140,7 @@ bool CServerContrl::StartServ()
 	//创建监听线程
 	m_hServCtrl=CreateThread(0,0,ServListenThread,this,0,0);
 	m_bThreadCtrl=FALSE;
-
+	
 	AfxMessageBox(_T("服务器启动成功！"));
 	return true;
 }
@@ -226,7 +232,7 @@ DWORD WINAPI CServerContrl::ServListenThread(LPVOID lpParam)
 							CServIndex* ServIndex=new CServIndex();
 							CString m_strUserMsg;//用户发过来的目录路径
 							m_strUserMsg=recvPack.sContent;
-							//获取该目录下的子文件及文件夹信息
+							//获取该用户的目录索引信息
 							pServCtrl->m_StrIndexInfo=ServIndex->GetIndexInfo(m_strUserMsg);
 
 							//返回用户的目录信息
@@ -276,7 +282,7 @@ DWORD WINAPI CServerContrl::ServListenThread(LPVOID lpParam)
 							CString m_strUserMsg;//用户发过来的目录路径
 							m_strUserMsg=recvPack.sContent;
 							//创建文件
-							CString path=_T("E:\\企业网盘目录\\")+m_strUserMsg;
+							CString path=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg;
 							FILE* inFile;
 							char c_path[1024];
 							int n=path.GetLength();
@@ -329,7 +335,7 @@ DWORD WINAPI CServerContrl::ServListenThread(LPVOID lpParam)
 							CString m_strUserMsg;//用户发过来的目录路径
 							m_strUserMsg=recvPack.sContent;
 
-							CString path=_T("E:\企业网盘目录\\")+m_strUserMsg;
+							CString path=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg;
 							if(!CreateDirectory(path,NULL))
 							{
 								CString msgStr;
@@ -340,6 +346,95 @@ DWORD WINAPI CServerContrl::ServListenThread(LPVOID lpParam)
 							//更新用户索引记录
 							CServIndex* ServIndex=new CServIndex();
 							ServIndex->UpdateIndex(pServCtrl->m_strUserName);
+
+							break;
+						}
+					case DELETEFILE:
+						{
+							CString m_strUserMsg;//用户发过来的目录路径
+							m_strUserMsg=recvPack.sContent;
+							
+							CString path=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg;
+							//判断删除的是文件还是文件夹
+							DWORD value = GetFileAttributes(path);
+							if( (value & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY )
+								pServCtrl->	RecursiveDelete(path);
+							else
+								DeleteFile(path);
+
+							//更新用户索引记录
+							CServIndex* ServIndex=new CServIndex();
+							ServIndex->UpdateIndex(pServCtrl->m_strUserName);
+							break;
+						}
+					case REFRESH:
+						{
+							//更新用户索引记录
+							CServIndex* ServIndex=new CServIndex();
+							ServIndex->UpdateIndex(pServCtrl->m_strUserName);
+
+							break;
+						}
+					case DOWNLOADFILE:
+						{
+							CString m_strUserMsg;//用户发过来的目录路径
+							m_strUserMsg=recvPack.sContent;
+
+							CString path;
+							path=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg;
+							//发送文件信息
+							pServCtrl->SendFile(pServCtrl->m_fdAllSocket.fd_array[i],path);
+
+							break;
+						}
+					case DOWNLOADCATALOG:
+						{
+							CString m_strUserMsg;//用户发过来的目录路径
+							m_strUserMsg=recvPack.sContent;
+							CString tmpPath=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg;
+							//发送目录信息
+							pServCtrl->RecursiveSend(pServCtrl->m_fdAllSocket.fd_array[i],tmpPath,tmpPath);
+
+							//发送目录结束信息
+							ZeroMemory(&sendPack,sizeof(sendPack));
+							CString endSending=_T("send_cat_end");
+							int n=endSending.GetLength();
+							int len=WideCharToMultiByte(CP_ACP,0,endSending,endSending.GetLength(),NULL,0,NULL,NULL);
+							WideCharToMultiByte(CP_ACP,0,endSending,endSending.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
+							sendPack.sContent[len]='\0';
+							sendPack.nContentLen=len;
+							sendPack.iType=1;
+							sendPack.nPackLen=sizeof(sendPack);
+							int result=send(pServCtrl->m_fdAllSocket.fd_array[i],(char*)&sendPack,sendPack.nPackLen,0);
+
+							if(result==SOCKET_ERROR)
+							{
+								AfxMessageBox(_T("发送目录结束包失败！"));
+							}
+							break;
+						}
+					case MOVEFILE:
+						{
+							CString m_strUserMsg;//用户发过来的目录路径
+							m_strUserMsg=recvPack.sContent;
+							
+							int pos=m_strUserMsg.Find('+');
+							CString srcPath=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg.Left(pos);
+							CString desPath=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg.Right(m_strUserMsg.GetLength()-pos-1);
+
+							//判断删除的是文件还是文件夹
+							DWORD value = GetFileAttributes(srcPath);
+							if( (value & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY )
+							{
+								pServCtrl->RecursiveMove(srcPath,desPath);
+							}
+							else
+								MoveFile(srcPath,desPath);
+
+							//更新用户索引记录
+							CServIndex* ServIndex=new CServIndex();
+							ServIndex->UpdateIndex(pServCtrl->m_strUserName);
+
 							break;
 						}
 					}
@@ -349,6 +444,249 @@ DWORD WINAPI CServerContrl::ServListenThread(LPVOID lpParam)
 	}
 	Sleep(100);
 }
+//发送文件
+void CServerContrl::SendFile(SOCKET cSocket,CString filePath)
+{
+	//发送文件数据
+	FILE* infile;
+	char c_path[1024];
+
+	memset(c_path,0,filePath.GetLength()*2+1);
+	USES_CONVERSION; 
+	strcpy((LPSTR)c_path,OLE2A(filePath.LockBuffer()));
+	infile=fopen(c_path,"rb");
+
+	u_long ulFlagCount = 0;            //记录读了多少数据
+	u_long ulFileRead = 0;					//一次实际读取的字节数
+	char c_msg[1024];
+	CString recvMsg;
+	int result;
+	DataPackage sendPack;
+
+	while((ulFileRead=fread(Buffer,sizeof( char),MAX_BUFFER_LEN,infile))!=0)
+	{
+		ZeroMemory(&sendPack,sizeof(sendPack));
+		sendPack.nPackLen=sizeof(sendPack);
+		sendPack.nContentLen=ulFileRead;
+		CopyMemory(sendPack.sContent,Buffer,ulFileRead);
+		sendPack.nPosition=ulFlagCount;
+		sendPack.iType=2;
+
+		result=send(cSocket,(char*)&sendPack,sendPack.nPackLen,0);
+		Sleep(1);
+		if(result==SOCKET_ERROR)
+		{
+			AfxMessageBox(_T("发送文件失败！"));
+		}
+		else
+		{
+			ulFlagCount+=ulFileRead;
+		}
+	}
+
+	fclose(infile);
+	//发送文件结束包
+	ZeroMemory(&sendPack,sizeof(sendPack));
+	sendPack.nPackLen=sizeof(sendPack);
+	CString strTmp=_T("send_file_end");
+	int n=strTmp.GetLength();
+	int len=WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength(),NULL,0,NULL,NULL);
+	WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
+	sendPack.sContent[len]='\0';
+	sendPack.nContentLen=len;
+	sendPack.iType=2;
+	result=send(cSocket,(char*)&sendPack,sendPack.nPackLen,0);
+	if(result==SOCKET_ERROR)
+	{
+		AfxMessageBox(_T("发送文件结束包失败！"));
+	}
+}
+//递归移动目录
+bool CServerContrl::RecursiveMove(CString srcPath,CString desPath)
+{
+	if(srcPath == _T(""))
+		return false;
+	
+	CreateDirectory(desPath,NULL);
+
+	wchar_t wcPath[MAX_PATH] = {0};
+	wcscpy_s(wcPath,MAX_PATH,srcPath);
+	wcscat_s(wcPath,MAX_PATH,_T("\\*.*"));
+	CString strPath=desPath;
+	WIN32_FIND_DATA FindFileData;
+	ZeroMemory(&FindFileData,sizeof(WIN32_FIND_DATA));
+
+	HANDLE hFindFile = FindFirstFile(wcPath,&FindFileData);
+
+	if(hFindFile == INVALID_HANDLE_VALUE)
+		return false;
+
+	BOOL bContinue = true;
+
+	while (bContinue != false)
+	{
+		//bIsDots为真表示是.或..
+		bool bIsDots = (wcscmp(FindFileData.cFileName,_T(".")) == 0 || wcscmp(FindFileData.cFileName,_T("..")) == 0);
+		if ((FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && bIsDots == false)
+		{
+			//是目录,就再进入该目录
+			wcscpy_s(wcPath,MAX_PATH,srcPath);
+			wcscat_s(wcPath,MAX_PATH,_T("\\"));
+			wcscat_s(wcPath,MAX_PATH,FindFileData.cFileName);
+			RecursiveMove(wcPath,desPath+_T("\\")+FindFileData.cFileName);
+			//寻找下一文件
+			bContinue = FindNextFile(hFindFile,&FindFileData);
+			continue;
+		}
+
+		if (bIsDots == false)
+		{
+			//是文件删除之
+			wcscpy_s(wcPath,MAX_PATH,srcPath);
+			wcscat_s(wcPath,MAX_PATH,_T("\\"));
+			wcscat_s(wcPath,MAX_PATH,FindFileData.cFileName);
+			MoveFile(wcPath,desPath+_T("\\")+FindFileData.cFileName);
+		}
+		//寻找下一文件
+		bContinue = FindNextFile(hFindFile,&FindFileData);
+
+	}
+
+	FindClose(hFindFile);
+
+	//删除空目录
+	RemoveDirectory(srcPath);
+	return true;
+}
+//递归目录发送文件夹
+void CServerContrl::RecursiveSend(SOCKET cSocket,CString szPath,CString rootPath)
+{
+	CFileFind ff;  
+	CString path = szPath;  
+	int result;
+	DataPackage sendPack;
+
+	if(path.Right(1) != _T("\\"))  
+		path += _T("\\");  
+
+
+	path += _T("*.*");  
+	BOOL res = ff.FindFile(path);  
+
+	while(res)  
+	{  
+		res = ff.FindNextFile();  
+		//是文件时直接发送文件
+		if (!ff.IsDots() && !ff.IsDirectory())  
+		{
+			ZeroMemory(&sendPack,sizeof(sendPack));
+			sendPack.iType=2; //发送文件
+			sendPack.nPackLen=sizeof(sendPack);
+			CString strTmp=ReturnCientPath(ff.GetFilePath(),rootPath);
+			int n=strTmp.GetLength();
+			int len=WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength(),NULL,0,NULL,NULL);
+			WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
+			sendPack.sContent[len]='\0';
+			sendPack.nContentLen=len;
+			//如果发送的是文件，先发送一个确认包
+			result=send(cSocket,(char*)&sendPack,sendPack.nPackLen,0);
+			if(result==SOCKET_ERROR)
+			{
+				AfxMessageBox(_T("发送文件结束包失败！"));
+			}
+			SendFile(cSocket,ff.GetFilePath());
+		}
+		else if (ff.IsDots())  
+			continue;  
+		else if (ff.IsDirectory())  
+		{  
+			//发送目录名称信息
+			ZeroMemory(&sendPack,sizeof(sendPack));
+			path = ff.GetFilePath(); 
+			CString strTmp=ReturnCientPath(ff.GetFilePath(),rootPath);
+			int n=strTmp.GetLength();
+			int len=WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength(),NULL,0,NULL,NULL);
+			WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
+			sendPack.sContent[len]='\0';
+			sendPack.nContentLen=len;
+			sendPack.iType=1;
+			sendPack.nPackLen=sizeof(sendPack);
+			result=send(cSocket,(char*)&sendPack,sendPack.nPackLen,0);
+
+			if(result==SOCKET_ERROR)
+			{
+				AfxMessageBox(_T("发送文件结束包失败！"));
+			}
+			//是目录时继续递归，发送该目录下的文件  
+			RecursiveSend(cSocket,path,rootPath);  
+ 
+		}  
+	}  
+
+	ff.Close();
+
+}
+
+//解析服务器路径为客户端路径
+CString CServerContrl::ReturnCientPath(CString servPath,CString rootPath)
+{
+	int pos=rootPath.GetLength();
+	return servPath.Right(servPath.GetLength()-pos-1);
+}
+//递归删除文件夹
+bool CServerContrl::RecursiveDelete(CString szPath)  
+{  
+	if(szPath == _T(""))
+		return false;
+
+	wchar_t wcPath[MAX_PATH] = {0};
+	wcscpy_s(wcPath,MAX_PATH,szPath);
+	wcscat_s(wcPath,MAX_PATH,_T("\\*.*"));
+	WIN32_FIND_DATA FindFileData;
+	ZeroMemory(&FindFileData,sizeof(WIN32_FIND_DATA));
+
+	HANDLE hFindFile = FindFirstFile(wcPath,&FindFileData);
+
+	if(hFindFile == INVALID_HANDLE_VALUE)
+		return false;
+
+	BOOL bContinue = true;
+
+	while (bContinue != false)
+	{
+		//bIsDots为真表示是.或..
+		bool bIsDots = (wcscmp(FindFileData.cFileName,_T(".")) == 0 || wcscmp(FindFileData.cFileName,_T("..")) == 0);
+		if ((FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && bIsDots == false)
+		{
+			//是目录,就再进入该目录
+			wcscpy_s(wcPath,MAX_PATH,szPath);
+			wcscat_s(wcPath,MAX_PATH,_T("\\"));
+			wcscat_s(wcPath,MAX_PATH,FindFileData.cFileName);
+			RecursiveDelete(wcPath);
+			//寻找下一文件
+			bContinue = FindNextFile(hFindFile,&FindFileData);
+			continue;
+		}
+
+		if (bIsDots == false)
+		{
+			//是文件删除之
+			wcscpy_s(wcPath,MAX_PATH,szPath);
+			wcscat_s(wcPath,MAX_PATH,_T("\\"));
+			wcscat_s(wcPath,MAX_PATH,FindFileData.cFileName);
+			DeleteFile(wcPath);
+		}
+		//寻找下一文件
+		bContinue = FindNextFile(hFindFile,&FindFileData);
+
+	}
+
+	FindClose(hFindFile);
+
+	//删除空目录
+	RemoveDirectory(szPath);
+	return true;
+}  
 //判断接入连接的用户是否存在
 int CServerContrl::UserLogin(CString Userinfo)
 {

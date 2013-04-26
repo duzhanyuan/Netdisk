@@ -11,12 +11,13 @@
 //用户连接操作
 typedef enum _USER_OPR_TYPE
 {
-	LOGIN=1,								//用户登录
-	UPLOADFILE,							//上传文件
+	LOGIN=1,							//用户登录
+	UPLOADFILE,						//上传文件
 	UPLOADCATLOG,						//上传文件夹
 	NEWFLODER,							//新建文件夹
 	DELETEFILE,							//删除
-	DOWNLOAD,							//下载
+	DOWNLOADFILE,						//下载文件
+	DOWNLOADCATALOG,					//下载目录
 	MOVEFILE,							//移动
 	REFRESH,							//刷新
 	HISTROYVERSION,						//历史版本
@@ -31,6 +32,12 @@ typedef enum _USERLOGIN_TYPE
 	LOGIN_SUCCESS,						//登录成功
 	OTHER_ERROR							//其他错误			
 }USERLOGIN_TYPE;
+//文件信息
+//typedef struct _FileInfor
+//{
+//	char filepath[MAX_BUFFER_LEN];
+//	char filename[MAX_BUFFER_LEN];
+//};
 //发送的数据包
 typedef struct _DataPackage  
 {
@@ -53,6 +60,9 @@ public:
 	HANDLE			m_hServCtrl;
 	BOOL			m_bThreadCtrl;
 	CString			m_strUserName;
+	CString			m_strDiskRootPath;
+	CRITICAL_SECTION m_csFile;	//临界区对象
+
 public:
 	bool InitSocket();
 
@@ -60,7 +70,11 @@ public:
 	void StopServ();
 
 	int UserLogin(CString Userinfo);
-
+	bool RecursiveDelete(CString szPath);
+	bool RecursiveMove(CString srcPath,CString desPath);
+	void RecursiveSend(SOCKET cSocket,CString szPath,CString rootPath) ;
+	void SendFile(SOCKET cSocket,CString filePath);
+	CString ReturnCientPath(CString servPath,CString rootPath);
 	static DWORD WINAPI ServListenThread(LPVOID lpParam);
 	CServerContrl();
 	virtual ~CServerContrl();

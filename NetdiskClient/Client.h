@@ -7,6 +7,7 @@
 #define	MAX_BUFFER_FILE_LEN	  1024*60
 #define DEFAULT_PORT          12345                      // 默认端口
 #define DEFAULT_IP            _T("127.0.0.1")            // 默认IP地址
+class CNetdiskClientApp;
 class CNetdiskClientDlg;
 class Client;
 
@@ -36,7 +37,8 @@ typedef enum _USER_OPR_TYPE
 	UPLOADCATLOG,						//上传文件夹
 	NEWFLODER,							//新建文件夹
 	DELETEFILE,							//删除
-	DOWNLOAD,							//下载
+	DOWNLOADFILE,						//下载文件
+	DOWNLOADCATALOG,					//下载目录
 	MOVEFILE,							//移动
 	REFRESH,							//刷新
 	HISTROYVERSION,						//历史版本
@@ -49,6 +51,12 @@ typedef enum _SERV_SEND_TYPE
 	EMPTYCATALOG=14,					//发送非空目录信息
 	NONEMPTYCATALOG						//发送空目录信息
 }SERV_SEND_TYPE;
+//文件信息
+//typedef struct _FileInfor
+//{
+//	char filepath[MAX_BUFFER_LEN];
+//	char filename[MAX_BUFFER_LEN];
+//};
 
 //发送的数据包
 typedef struct _DataPackage  
@@ -78,18 +86,18 @@ public:
 	void Clean();
 	bool RecvReturnMsg();				//获取服务器返回信息
 public:
-	bool UpdateClient();				//更新客户端目录文件数据
-	bool UpdateClientCatalog(CString baseFolder);			//更新客户端目录信息
+	bool UpdateClient(CString path);				//更新客户端目录文件数据
+	bool UpdateClientCatalog();			//更新客户端目录信息
 	bool GetCatalogInfo(CString FloderName);						//获取目录信息
 	bool UploadClientFile();					//上传文件
-	bool DeleteClientFile();					//删除文件
-	bool MoveClientFile();						//移动文件
-	bool DownloadFile();						//下载文件
+	bool DeleteClientFile(CString path);		//删除文件
+	bool MoveClientFile(CString path);			//移动文件
+	bool DownloadFile(CString path);			//下载文件
 	bool FindFile();							//查找文件
 	bool CreateNewFloder(CString baseFloder);	//新建文件夹
 public:
 public:
 	//CString m_strClientName;				//用户登录名
-	CNetdiskClientDlg*			m_pMainDlg;
+	CNetdiskClientApp*			m_pMainApp;
 };
 

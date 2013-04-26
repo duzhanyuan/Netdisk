@@ -19,6 +19,7 @@ CUserLoginDlg::CUserLoginDlg(CWnd* pParent /*=NULL*/)
 	m_strName = _T("user");
 	m_strPasswd = _T("123456");
 	m_ndApp=(CNetdiskClientApp*)AfxGetApp() ;
+	
 }
 
 CUserLoginDlg::~CUserLoginDlg()

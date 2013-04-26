@@ -27,6 +27,7 @@ public:
 	CString		m_strIndexInfo;
 	Client		m_Client;
 	CNetdiskClientDlg* m_MainDlg;
+	int			m_iMyDiskCount;
 public:
 	void				UpdateCatalogShow(CString indexInfo);
 	CString				GetCatalogName(CString srcStr); 
@@ -35,7 +36,7 @@ public:
 	int					NumOfSubCatalog(CString srcStr);
 	CString				getRootCatalogName(CString srcName);
 	void				SetSelectByFileListClick(CString path);
-	
+	BOOL			DeleteSubRoot(HTREEITEM root);
 	//bool				readCatalogIndex(CCatalogIndex* catalogHead,CString srcStr);
 	//HTREEITEM			RecurInsertCatalogInfo(HTREEITEM parentRoot,CString catalogName);
 	virtual BOOL		OnInitDialog();

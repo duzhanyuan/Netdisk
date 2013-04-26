@@ -4,6 +4,14 @@
 #include "HyperLink.h"
 
 // CFileUploadDlg dialog
+typedef struct _THREADWORKER
+{
+	SOCKET  cSocket;
+	CFileUploadDlg* pFileULDlg;
+	CListCtrl*	pListCtrl;
+	Client* pClient;
+	CNetdiskClientDlg* pMainDlg;
+}THREADWORKER;
 
 class CFileUploadDlg : public CDialogEx
 {
@@ -28,13 +36,19 @@ public:
 	CButton m_btnUpload;
 	CProgressCtrl m_UploadProg;
 	CListCtrl m_lcUploadFile;
-
+	u_long	m_ulFileSize;
+	u_long	m_ulCurTotal;
+	THREADWORKER  m_pThreadWorker;
+	int		m_iAddFileCount;
 public:	
 	void InitUploadFileList();
 	bool IfFileAdded(CString fileName);
 	afx_msg void OnStnClickedStaticCleanlist();
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	virtual BOOL OnInitDialog();
+	void	OnTimer(UINT nIDEvent);
+	void	ResetCurFileDL(void);
+	static DWORD WINAPI UploadThread(LPVOID lpParam);
 	afx_msg void OnBnClickedBtnAddfile();
 	afx_msg void OnBnClickedBtnUpload();
 

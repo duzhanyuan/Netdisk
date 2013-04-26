@@ -2,9 +2,11 @@
 #include "Client.h"
 #include "locale.h"
 #include "NetdiskClient.h"
+#include "NetdiskClientDlg.h"
 
 Client::Client(void)
 {
+	m_pMainApp=(CNetdiskClientApp*)AfxGetApp() ;
 }
 
 
@@ -198,10 +200,10 @@ void Client::Clean()
 }
 
 //更新客户端目录信息
-bool Client::UpdateClientCatalog(CString baseFolder)
+bool Client::UpdateClientCatalog()
 {
 	//将用户目录的根目录名发送给服务器，根目录名即为用户登录名
-	SendMsgToServ(baseFolder,UPDATECLIENT);
+	SendMsgToServ(m_pMainApp->m_loginName,UPDATECLIENT);
 	//获取返回信息
 	if(!RecvReturnMsg())
 	{
@@ -228,16 +230,31 @@ bool Client::GetCatalogInfo(CString FloderName)
 	return true;
 }
 
+//发送创建文件夹的信息
 bool Client::CreateNewFloder(CString baseFloder)
 {
 	//发送操作信息到服务器
 	SendMsgToServ(baseFloder,NEWFLODER);
 	//获取返回信息
-	if(!RecvReturnMsg())
-	{
-		AfxMessageBox(_T("获取返回信息失败！"));
-		return false;
-	}
+	//if(!RecvReturnMsg())
+	//{
+	//	AfxMessageBox(_T("获取返回信息失败！"));
+	//	return false;
+	//}
+	return true;
+}
+
+//发送删除文件信息
+bool Client::DeleteClientFile(CString path)
+{
+	//发送操作信息到服务器
+	SendMsgToServ(path,DELETEFILE);
+	return true;
+}
+//发送下载文件信息
+bool Client::DownloadFile(CString path)
+{
+	SendMsgToServ(path,DELETEFILE);
 	return true;
 }
 
@@ -274,4 +291,18 @@ bool Client::RecvReturnMsg()
 			AfxMessageBox(msgStr);
 			return false;
 		}
+}
+
+//刷新客户端信息
+bool Client::UpdateClient(CString path)
+{
+	SendMsgToServ(path,REFRESH);
+	return true;
+}
+
+//移动文件夹或者文件
+bool Client::MoveClientFile(CString path)
+{
+	SendMsgToServ(path,MOVEFILE);
+	return true;
 }
