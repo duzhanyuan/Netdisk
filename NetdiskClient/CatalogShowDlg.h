@@ -28,15 +28,16 @@ public:
 	Client		m_Client;
 	CNetdiskClientDlg* m_MainDlg;
 	int			m_iMyDiskCount;
+	CString     m_strShareFloder;
 public:
-	void				UpdateCatalogShow(CString indexInfo);
+	void				UpdateCatalogShow(HTREEITEM rootNode,CString indexInfo);
 	CString				GetCatalogName(CString srcStr); 
 	CString				GetOneIndexInfo(CString srcStr,int &iPos);
 	int					NumOfSubFile(CString srcStr);
 	int					NumOfSubCatalog(CString srcStr);
 	CString				getRootCatalogName(CString srcName);
-	void				SetSelectByFileListClick(CString path);
-	BOOL			DeleteSubRoot(HTREEITEM root);
+	void				SetSelectByFileListClick(HTREEITEM rootNode,CString path);
+	BOOL				DeleteSubRoot(HTREEITEM root);
 	//bool				readCatalogIndex(CCatalogIndex* catalogHead,CString srcStr);
 	//HTREEITEM			RecurInsertCatalogInfo(HTREEITEM parentRoot,CString catalogName);
 	virtual BOOL		OnInitDialog();

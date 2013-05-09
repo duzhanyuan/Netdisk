@@ -22,6 +22,7 @@
     <None Include="res\NetDiskServer.ico">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="..\NetdiskClient\ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NetDiskServer.h">
@@ -72,6 +73,15 @@
     <ClInclude Include="ServerContrl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RecycleFileHistriyPath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="md5.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HistroyVersionIndex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetDiskServer.cpp">
@@ -114,6 +124,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ServerContrl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RecycleFileHistriyPath.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="md5.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HistroyVersionIndex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

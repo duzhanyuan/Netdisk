@@ -27,7 +27,7 @@ public:
 	afx_msg void OnBtnShowpath();
 	afx_msg void OnBnClickedOk();
 	CString m_strComfPwd;
-
+	CString m_strRecyPath;
 	//CNetDiskServerDlg* m_pNetdiskDlg;
 	virtual BOOL OnInitDialog();
 };

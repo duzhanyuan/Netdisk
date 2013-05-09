@@ -200,10 +200,11 @@ void Client::Clean()
 }
 
 //更新客户端目录信息
-bool Client::UpdateClientCatalog()
+bool Client::UpdateClientCatalog(CString Rootpath)
 {
 	//将用户目录的根目录名发送给服务器，根目录名即为用户登录名
-	SendMsgToServ(m_pMainApp->m_loginName,UPDATECLIENT);
+	//SendMsgToServ(m_pMainApp->m_loginName,UPDATECLIENT);
+	SendMsgToServ(Rootpath,UPDATECLIENT);	
 	//获取返回信息
 	if(!RecvReturnMsg())
 	{
@@ -304,5 +305,107 @@ bool Client::UpdateClient(CString path)
 bool Client::MoveClientFile(CString path)
 {
 	SendMsgToServ(path,MOVEFILE);
+	return true;
+}
+
+//发送更新回收站信息
+bool Client::UpdateRecycleList(CString path)
+{
+	SendMsgToServ(path,RECYCLE_UPDATE);
+
+	//获取返回信息
+	if(!RecvReturnMsg())
+	{
+		AfxMessageBox(_T("获取返回信息失败！"));
+		return false;
+	}
+	return true;
+}
+
+//发送回收站还原文件信息
+bool Client::RecycleRestore(CString path)
+{
+	SendMsgToServ(path,RECYCLE_RESTORE);
+	return true;
+}
+
+//发送删除回收站记录信息
+bool Client::RecycleDel(CString path)
+{
+	SendMsgToServ(path,RECYCLE_DEL);
+	return true;
+}
+
+//发送清空回收站的信息
+bool Client::RecycleClean(CString path)
+{
+	SendMsgToServ(path,RECYCLE_CLEAN);
+	return true;
+}
+
+//发送获取文件大小的信息
+bool Client::GetFileSizeFromServ(CString path)
+{
+	SendMsgToServ(path,GETFILESIZEINFO);
+
+	if(!RecvReturnMsg())
+		return false;
+	return true;
+}
+
+//发送历史版本信息
+bool Client::GetHistroyVersionInfo(CString strInfo)
+{
+	SendMsgToServ(strInfo,HISTROYVERSION);
+	if(!RecvReturnMsg())
+		return false;
+	return true;
+}
+
+//发送还原历史记录版本信息
+bool Client::ReStoreHisVerFile(CString path)
+{
+	SendMsgToServ(path,HIS_RESTORE);
+	return true;
+}
+
+//发送删除历史记录版本信息
+bool Client::DeleteHisVerFile(CString path)
+{
+	SendMsgToServ(path,HIS_DELETE);
+	return true;
+}
+
+//发送清空历史记录版本信息
+bool Client::CleanHisVerFile(CString path)
+{
+	SendMsgToServ(path,HIS_CLEAR);
+	return true;
+}
+
+//发送查找文件信息
+bool Client::FindFileByStr(CString findStr)
+{
+	SendMsgToServ(findStr,FINDFILEBYSTR);
+	if(!RecvReturnMsg())
+		return false;
+	return true;
+}
+
+//发送查找回收站文件信息
+bool Client::RecycleFindFile(CString findStr)
+{
+	SendMsgToServ(findStr,RECYCLE_FIND);
+	if(!RecvReturnMsg())
+		return false;
+	return true;
+}
+
+//发送按日期查看文件的信息
+bool Client::GetFileByDataShow(CString strInfo)
+{
+	SendMsgToServ(strInfo,FINDFILEBYTIME);
+	if(!RecvReturnMsg())
+		return false;
 	return true;
 }

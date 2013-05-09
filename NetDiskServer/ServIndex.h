@@ -17,17 +17,19 @@ public:
 	CFile*	m_cfile;
 	CString m_strRootPath ;
 	CString m_strIndexPath;
+	CString	m_strRecyclePath;
+	CString m_strRecycleIndexPath;
 	CCatalogIndex* m_catalogIndexHead;
 	CFileIndex*	   m_fileIndexHead;
 
 public:
-	BOOL	UpdateIndex(CString rootName);					//创建、更新用户目录索引
+	BOOL	UpdateIndex(CString rootPath,CString indexPath,CString rootName);					//创建、更新用户目录索引
 	BOOL	InsertIndexItem();				//插入索引条录
 	BOOL	DeleteIndexItem();				//删除索引条目
 	BOOL	EditIndex();					//编辑索引条目
 	BOOL	DeleteIndex(CString rootName);					//删除用户目录索引
 	void	UpdateIndexList(CString rootPath,CCatalogIndex* catalogIndexHead);					//更新用户目录索引链表
-	CString	GetIndexInfo(CString &rootName);					//获取索引信息
+	CString	GetIndexInfo(CString indexPath,CString &rootName);					//获取索引信息
 public:
 	int		getSubCatalogCount(CCatalogIndex* catalogHead);						//获取子目录数
 	int		getSubFileCount(CFileIndex* fileHead);									//获取子文件数
@@ -38,10 +40,13 @@ public:
 	void	readSubCatalogInfo(CCatalogIndex* catalogHead,CFile* pcFile);			//读取子目录信息
 	void	readNextCatalogInfo(CCatalogIndex* catalogHead,CFile* pcFile);			//读取同级目录信息
 	void	readSubFileInfo(CFileIndex* fileHead,CFile* pcFile);					//读取子文件信息
-	CString	getCatalogInfo(CString floderPath);
+	CString	getCatalogInfo(CString rootPath,CString indexPath,CString floderPath);
 	CString	GetOneIndexInfo(CString srcStr,int &iPos);
 	CString	GetCatalogName(CString srcStr);
 	CString	GetPath(CString srcStr);
+	CString GetTime(CString srcStr);
+	CString	FindFileIndex(CString indexPath,CString rootName,CString findStr);
+	CString FindFileByTime(CString CurrentPath,CString strStartTime,CString StrEndTime);
 	//void	testWriteSub(CCatalogIndex* catalogHead,CStdioFile* pStdFile);
 	//void	testWriteNext(CCatalogIndex* catalogHead,CStdioFile* pStdFile);
 	//void	testWriteFile(CFileIndex* fileHead,CStdioFile* pStdFile);

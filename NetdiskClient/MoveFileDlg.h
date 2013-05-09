@@ -22,9 +22,11 @@ public:
 	CTreeCtrl m_tcMoveFile;
 	CNetdiskClientDlg*	m_pMainDlg;
 	HTREEITEM	m_MyDisk;
+	HTREEITEM	m_ShareDisk;
 	CString		m_strMovePath;
+	CString		m_strShareFloder;
 	virtual BOOL OnInitDialog();
-	void ShowCatalog(CString indexInfo);
+	void ShowCatalog(HTREEITEM rootNode,CString indexInfo);
 	BOOL DeleteSubRoot(HTREEITEM hItem);
 	CString GetOneIndexInfo(CString srcStr,int &iPos);
 	CString GetCatalogName(CString srcStr);

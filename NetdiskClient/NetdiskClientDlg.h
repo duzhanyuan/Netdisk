@@ -8,6 +8,7 @@
 #include "DateShowDlg.h"
 #include "resource.h"
 #include "SysIcon.h"
+#include "SearchFile.h"
 //历史路径结构体
 typedef struct _HistroyPath
 {
@@ -52,14 +53,16 @@ public:
 	HistroyPath*	m_pHisPathHead;
 	HistroyPath*	m_pHisPathTail;
 	CSysIcon m_cSysIcon;
-
+	CString			m_strShareFloder;
+	CSearchFile*    m_pSearchFile;
+	BOOL			m_bFindFileState;
 	//int				m_iHistroyFlag;
 	//CString			m_strCurrentPath;
 public:
 	void			InitCatalogAndDateShow();
 
 	void			InitFileShow();
-	void			ShowFileList(CString indexInfo);
+	void			ShowFileList(CListCtrl* plistCtrl,CString indexInfo);
 	CString			getFileListItemName(CString srcStr);
 	CString			getFileListItemSize(CString srcStr);
 	CString			getFileListItemEditTime(CString srcStr);
@@ -88,4 +91,11 @@ public:
 	CButton m_btnShowList;
 	afx_msg void OnBnClickedBtnShowicon();
 	afx_msg void OnBnClickedBtnRecycle();
+	CMFCButton m_btnReturnBack;
+	afx_msg void OnBnClickedBtnReturnback();
+	void SetCatalogSelected(CString curPath);
+	afx_msg void OnBnClickedBtnHistory();
+	CString m_strSearchStr;
+	afx_msg void OnBnClickedBtnSearch();
+	afx_msg void OnNMClickListFile(NMHDR *pNMHDR, LRESULT *pResult);
 };

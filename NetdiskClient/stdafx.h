@@ -43,12 +43,6 @@
 
 #include "afxdb.h"
 #include <afx.h>
-//#include <mysql.h>
-//#include <winsock2.h>
-//#include <odbcinst.h> 
-//#include <afx.h>
-
-
 
 
 #ifdef _UNICODE

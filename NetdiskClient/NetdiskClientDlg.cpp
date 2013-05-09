@@ -10,6 +10,9 @@
 #include "NewFloderDlg.h"
 #include "DownLoadDlg.h"
 #include "MoveFileDlg.h"
+#include "RecycleDlg.h"
+#include "HistroyVersionDlg.h"
+#include "SearchFile.h"
 //#include "CatalogShowOpr.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -55,6 +58,11 @@ CNetdiskClientDlg::CNetdiskClientDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(CNetdiskClientDlg::IDD, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_strShareFloder=_T("共享文件夹");
+	//连接服务器获取客户端更新信息
+	m_strUserLoginName=((CNetdiskClientApp*)AfxGetApp())->m_loginName;
+	m_strCurrentPath=m_strUserLoginName;
+	m_strSearchStr = _T("");
 }
 
 void CNetdiskClientDlg::DoDataExchange(CDataExchange* pDX)
@@ -66,6 +74,8 @@ void CNetdiskClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_BTN_UPLOADFILE, m_btnUpload);
 	DDX_Control(pDX, IDC_BTN_SHOWICON, m_btnShowIcon);
 	DDX_Control(pDX, IDC_BTN_SHOWLIST, m_btnShowList);
+	DDX_Control(pDX, IDC_BTN_RETURNBACK, m_btnReturnBack);
+	DDX_Text(pDX, IDC_EDIT_SEARCH, m_strSearchStr);
 }
 
 BEGIN_MESSAGE_MAP(CNetdiskClientDlg, CDialogEx)
@@ -85,6 +95,10 @@ BEGIN_MESSAGE_MAP(CNetdiskClientDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTN_SHOWLIST, &CNetdiskClientDlg::OnBnClickedBtnShowlist)
 	ON_BN_CLICKED(IDC_BTN_SHOWICON, &CNetdiskClientDlg::OnBnClickedBtnShowicon)
 	ON_BN_CLICKED(IDC_BTN_RECYCLE, &CNetdiskClientDlg::OnBnClickedBtnRecycle)
+	ON_BN_CLICKED(IDC_BTN_RETURNBACK, &CNetdiskClientDlg::OnBnClickedBtnReturnback)
+	ON_BN_CLICKED(IDC_BTN_HISTORY, &CNetdiskClientDlg::OnBnClickedBtnHistory)
+	ON_BN_CLICKED(IDC_BTN_SEARCH, &CNetdiskClientDlg::OnBnClickedBtnSearch)
+	ON_NOTIFY(NM_CLICK, IDC_LIST_FILE, &CNetdiskClientDlg::OnNMClickListFile)
 END_MESSAGE_MAP()
 
 
@@ -136,11 +150,8 @@ BOOL CNetdiskClientDlg::OnInitDialog()
 	m_cSysIcon.m_ImageLargeList.Add(hIcon);
 	m_cSysIcon.m_arExtName.Add(_T(""));
 
-
 	//m_Client.Start();
-	//连接服务器获取客户端更新信息
-	m_strUserLoginName=((CNetdiskClientApp*)AfxGetApp())->m_loginName;
-	m_strCurrentPath=m_strUserLoginName;
+
 
 	//历史路径数组初始化
 	m_HistroyPathArr=new HistroyPath();
@@ -157,15 +168,22 @@ BOOL CNetdiskClientDlg::OnInitDialog()
 	//按目录显示以及按日期显示初始化
 	InitCatalogAndDateShow();
 
+	//文件显示初始化
 	m_lcFileShow.InsertColumn(0,_T("文件名"),LVCFMT_CENTER,300);
 	m_lcFileShow.InsertColumn(1,_T("大小"),LVCFMT_CENTER,150);
-	m_lcFileShow.InsertColumn(2,_T("更新时间"),LVCFMT_CENTER,200);
-	//文件显示初始化
+	m_lcFileShow.InsertColumn(2,_T("更新时间"),LVCFMT_CENTER,175);
 	InitFileShow();
+
+	//更新客户端文件信息显示
+	OnBnClickedBtnRefresh();
 
 	//初始化文件显示形式
 	m_btnShowList.EnableWindow(FALSE);
 	m_btnShowIcon.EnableWindow(TRUE);
+
+	m_btnReturnBack.EnableWindow(FALSE);
+
+	m_bFindFileState=FALSE;
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -235,6 +253,10 @@ void CNetdiskClientDlg::OnBnClickedBtnNewfloder()
 void CNetdiskClientDlg::OnBnClickedBtnDelete()
 {
 	// TODO: Add your control notification handler code here
+	m_bFindFileState=FALSE;
+	((CMFCButton*)GetDlgItem(IDC_BTN_UPLOADFILE))->EnableWindow(TRUE);
+	((CMFCButton*)GetDlgItem(IDC_BTN_NEWFLODER))->EnableWindow(TRUE);
+
 	int count=0;
 	//遍历listview，查看是否有选中要删除的项
 	for(int i=0;i<m_lcFileShow.GetItemCount();i++)
@@ -248,7 +270,7 @@ void CNetdiskClientDlg::OnBnClickedBtnDelete()
 		return;
 	}
 	//警告用户是否继续删除操作
-	int nRes = AfxMessageBox(_T("确定删除所选文件？"),MB_YESNO|MB_ICONQUESTION);
+	int nRes = AfxMessageBox(_T("确定将所选文件移到回收站？"),MB_YESNO|MB_ICONQUESTION);
 	if(nRes == IDYES)
 	{
 		//遍历删除文件或者文件夹 
@@ -261,19 +283,21 @@ void CNetdiskClientDlg::OnBnClickedBtnDelete()
 			}
 
 		}
-		//获取文件列表显示
-		if(m_Client.GetCatalogInfo(m_strCurrentPath))
-		{
-			m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-			ShowFileList(m_strIndexInfo);
-		}
-		//获取目录结构显示
-		if(m_Client.UpdateClientCatalog())
-		{
-			m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-			m_pCatShowDlg->UpdateCatalogShow(m_strIndexInfo);
+		//更新客户端显示
+		OnBnClickedBtnRefresh();
+		////获取文件列表显示
+		//if(m_Client.GetCatalogInfo(m_strCurrentPath))
+		//{
+		//	m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
+		//	ShowFileList(&m_lcFileShow,m_strIndexInfo);
+		//}
+		////更新我的网盘目录结构视图
+		//if(m_Client.UpdateClientCatalog(m_strUserLoginName))
+		//{
+		//	m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
+		//	m_pCatShowDlg->UpdateCatalogShow(m_pCatShowDlg->m_MyDisk,m_strIndexInfo);
 
-		}
+		//}
 
 	}
 
@@ -317,58 +341,24 @@ void CNetdiskClientDlg::InitCatalogAndDateShow()
 	m_pCatShowDlg->ShowWindow(SW_SHOW);
 	m_pDateShowDlg->ShowWindow(SW_HIDE);
 
-
-	if(m_Client.UpdateClientCatalog())
-	{
-		m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-		m_pCatShowDlg->UpdateCatalogShow(m_strIndexInfo);
-
-	}
-	else
-	{
-		AfxMessageBox(_T("刷新客户端信息失败！"));
-	}
-
 }
 
 //初始化文件显示
 void CNetdiskClientDlg::InitFileShow()
 {
-	//LONG lStyle;
-	//lStyle = GetWindowLong(m_lcFileShow.m_hWnd, GWL_STYLE);//获取当前窗口style
-	//lStyle &= ~LVS_TYPEMASK; //清除显示方式位
-	//lStyle |= LVS_REPORT; //设置style
-	//SetWindowLong(m_lcFileShow.m_hWnd, GWL_STYLE, lStyle);//设置style
-
-	//DWORD dwStyle = m_lcFileShow.GetExtendedStyle();
-	//dwStyle |= LVS_EX_FULLROWSELECT;//选中某行使整行高亮
-	//dwStyle |= LVS_EX_GRIDLINES;//网格线
-	//dwStyle |= LVS_EX_CHECKBOXES;//item前生成checkbox控件
-	//m_lcFileShow.SetExtendedStyle(dwStyle); //设置扩展风格
 
 	m_lcFileShow.ModifyStyle(0,LVS_SHOWSELALWAYS|LVS_REPORT|LVS_SINGLESEL|LVSIL_NORMAL);
 	m_lcFileShow.SetExtendedStyle(LVS_EX_FULLROWSELECT|LVS_EX_LABELTIP|LVS_EX_CHECKBOXES|LVS_EX_GRIDLINES);
 
-	
-	//int nRow = m_lcFileShow.InsertItem(0, _T("11"));//插入行
-	//m_lcFileShow.SetItemText(nRow, 2, _T("jacky"));//设置数据
-
-
-	//初始化文件列表显示
-	if(m_Client.GetCatalogInfo(m_strCurrentPath))
-	{
-		m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-		ShowFileList(m_strIndexInfo);
-	}
-
 	m_lcFileShow.SetImageList(&m_cSysIcon.m_ImageSmallList,LVSIL_SMALL);
+
 
 }
 
-void CNetdiskClientDlg::ShowFileList(CString indexInfo)
+void CNetdiskClientDlg::ShowFileList(CListCtrl* plistCtrl,CString indexInfo)
 {
 	//UpdateData(FALSE);
-	m_lcFileShow.DeleteAllItems();
+	plistCtrl->DeleteAllItems();
 
 	CArray<CString,CString&> *oneIndexInfoArr=new CArray<CString,CString&>();
 	CString strName,strTime,strSize,oneIndexInfo,tmpStr;
@@ -409,20 +399,18 @@ void CNetdiskClientDlg::ShowFileList(CString indexInfo)
 		lvi.iSubItem = 0;
 		lvi.pszText =(LPTSTR)(LPCTSTR)strName;
 		lvi.iImage = nType;		
-		m_lcFileShow.InsertItem(&lvi);
+		plistCtrl->InsertItem(&lvi);
 
 		lvi.iSubItem =1;
 		lvi.pszText = (LPTSTR)(LPCTSTR)strSize;
-		m_lcFileShow.SetItem(&lvi);
+		plistCtrl->SetItem(&lvi);
 
 		lvi.iSubItem =2;
 		lvi.pszText = (LPTSTR)(LPCTSTR)strTime;
-		m_lcFileShow.SetItem(&lvi);
+		plistCtrl->SetItem(&lvi);
 
-		//int nRow=m_lcFileShow.InsertItem(0,strName);
-		//m_lcFileShow.SetItemText(nRow,1,strSize);
-		//m_lcFileShow.SetItemText(nRow,2,strTime);
 	}
+	//SetCatalogSelected(m_strCurrentPath);
 }
 
 //获取一条索引记录
@@ -504,15 +492,34 @@ void CNetdiskClientDlg::OnNMDblclkListFile(NMHDR *pNMHDR, LRESULT *pResult)
 {
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
 	// TODO: Add your control notification handler code here
+
 	int selItem=pNMItemActivate->iItem;
 	if(selItem!=-1)
 	{
 		m_strCurrentPath=m_pCatShowDlg->m_strCurrentPath;
+		//处于查找状态下
+		if(m_bFindFileState)
+		{
+			CString tmpPath;
+			m_pSearchFile->m_pMapFilePath->Lookup(m_lcFileShow.GetItemText(selItem,0)+_T("|")+m_lcFileShow.GetItemText(selItem,2),tmpPath);
+			int pos;
+			if(-1==(pos=tmpPath.Find(m_strUserLoginName)))
+				pos=tmpPath.Find(m_strShareFloder);
+			tmpPath=tmpPath.Right(tmpPath.GetLength()-pos);
+			pos=tmpPath.ReverseFind('\\');
+			m_strCurrentPath=tmpPath.Left(pos);
+			m_bFindFileState=FALSE;
+			((CMFCButton*)GetDlgItem(IDC_BTN_UPLOADFILE))->EnableWindow(TRUE);
+			((CMFCButton*)GetDlgItem(IDC_BTN_NEWFLODER))->EnableWindow(TRUE);
+
+		}
+
 		if(m_lcFileShow.GetItemText(selItem,1)==_T(""))
 		{
 			m_strCurrentPath=m_strCurrentPath+_T("\\")+m_lcFileShow.GetItemText(selItem,0);
 			UpdateData(FALSE);
 
+			m_btnReturnBack.EnableWindow(TRUE);
 			//将本次操作路径添加到历史路径数组中
 			HistroyPath* tmpHistroyPath=new HistroyPath();
 			tmpHistroyPath->path=m_strCurrentPath;
@@ -520,11 +527,13 @@ void CNetdiskClientDlg::OnNMDblclkListFile(NMHDR *pNMHDR, LRESULT *pResult)
 			m_HistroyPathArr->next=tmpHistroyPath;
 			m_pHisPathTail=tmpHistroyPath;
 
+			//得到该路径所在目录下的子文件和子目录信息
 			if(m_Client.GetCatalogInfo(m_strCurrentPath))
 			{
 				m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-				ShowFileList(m_strIndexInfo);
-				m_pCatShowDlg->SetSelectByFileListClick(m_strCurrentPath);
+				ShowFileList(&m_lcFileShow,m_strIndexInfo);
+				//设置目录视图选中
+				SetCatalogSelected(m_strCurrentPath);
 			}
 		}
 	}
@@ -532,7 +541,15 @@ void CNetdiskClientDlg::OnNMDblclkListFile(NMHDR *pNMHDR, LRESULT *pResult)
 
 	*pResult = 0;
 }
+//设置目录选中效果
+void CNetdiskClientDlg::SetCatalogSelected(CString curPath)
+{
+	if(0 == (curPath.Find(m_strUserLoginName)))//判断用户单击的是我的网盘中的文件夹还是共享文件夹中的文件夹
+		m_pCatShowDlg->SetSelectByFileListClick(m_pCatShowDlg->m_MyDisk,curPath);
+	else 
+		m_pCatShowDlg->SetSelectByFileListClick(m_pCatShowDlg->m_ShareDisk,curPath);
 
+}
 //返回上一级目录
 void CNetdiskClientDlg::OnBnClickedMfcbtnLastcatalog()
 {
@@ -548,8 +565,8 @@ void CNetdiskClientDlg::OnBnClickedMfcbtnLastcatalog()
 	if(m_Client.GetCatalogInfo(m_strCurrentPath))
 	{
 		m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-		ShowFileList(m_strIndexInfo);
-		m_pCatShowDlg->SetSelectByFileListClick(m_strCurrentPath);
+		ShowFileList(&m_lcFileShow,m_strIndexInfo);
+		m_pCatShowDlg->SetSelectByFileListClick(m_pCatShowDlg->m_MyDisk,m_strCurrentPath);
 	}
 }
 
@@ -561,11 +578,10 @@ void CNetdiskClientDlg::OnBnClickedMfcbtnNextcatalog()
 	if(m_Client.GetCatalogInfo(m_strCurrentPath))
 	{
 		m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-		ShowFileList(m_strIndexInfo);
-		m_pCatShowDlg->SetSelectByFileListClick(m_strCurrentPath);
+		ShowFileList(&m_lcFileShow,m_strIndexInfo);
+		m_pCatShowDlg->SetSelectByFileListClick(m_pCatShowDlg->m_MyDisk,m_strCurrentPath);
 	}
 }
-
 
 //上传文件
 void CNetdiskClientDlg::OnBnClickedBtnUploadfile()
@@ -582,20 +598,30 @@ void CNetdiskClientDlg::OnBnClickedBtnUploadfile()
 void CNetdiskClientDlg::OnBnClickedBtnRefresh()
 {
 	// TODO: Add your control notification handler code here
+	m_bFindFileState=FALSE;
+	((CMFCButton*)GetDlgItem(IDC_BTN_UPLOADFILE))->EnableWindow(TRUE);
+	((CMFCButton*)GetDlgItem(IDC_BTN_NEWFLODER))->EnableWindow(TRUE);
+
 	if(m_Client.UpdateClient(m_strCurrentPath))
 	{
 		//获取文件列表显示
 		if(m_Client.GetCatalogInfo(m_strCurrentPath))
 		{
 			m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-			ShowFileList(m_strIndexInfo);
+			ShowFileList(&m_lcFileShow,m_strIndexInfo);
 		}
-		//获取目录结构显示
-		if(m_Client.UpdateClientCatalog())
+		//更新我的网盘目录结构显示
+		if(m_Client.UpdateClientCatalog(m_strUserLoginName))
 		{
 			m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-			m_pCatShowDlg->UpdateCatalogShow(m_strIndexInfo);
+			m_pCatShowDlg->UpdateCatalogShow(m_pCatShowDlg->m_MyDisk,m_strIndexInfo);
 
+		}
+		//更新共享文件夹目录结构显示
+		if(m_Client.UpdateClientCatalog(m_strShareFloder))
+		{
+			m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
+			m_pCatShowDlg->UpdateCatalogShow(m_pCatShowDlg->m_ShareDisk,m_strIndexInfo);
 		}
 	}
 }
@@ -628,6 +654,10 @@ void CNetdiskClientDlg::OnBnClickedBtnDownload()
 void CNetdiskClientDlg::OnBnClickedBtnMove()
 {
 	// TODO: Add your control notification handler code here
+	m_bFindFileState=FALSE;
+	((CMFCButton*)GetDlgItem(IDC_BTN_UPLOADFILE))->EnableWindow(TRUE);
+	((CMFCButton*)GetDlgItem(IDC_BTN_NEWFLODER))->EnableWindow(TRUE);
+
 	int count=0;
 	for(int i=0;i<m_lcFileShow.GetItemCount();i++)
 	{
@@ -649,23 +679,6 @@ void CNetdiskClientDlg::OnBnClickedBtnMove()
 
 	}
 }
-
-////按列表模式显示文件
-//void CNetdiskClientDlg::OnBnClickedMfcbtnShowlist()
-//{
-//	// TODO: Add your control notification handler code here
-//	m_btnShowIcon.EnableWindow(TRUE);
-//	m_btnShowList.EnableWindow(FALSE);
-//}
-//
-//
-//void CNetdiskClientDlg::OnBnClickedMfcbtnShowicon()
-//{
-//	// TODO: Add your control notification handler code here
-//	m_btnShowList.EnableWindow(TRUE);
-//	m_btnShowIcon.EnableWindow(FALSE);
-//
-//}
 
 //按列表模式显示文件
 void CNetdiskClientDlg::OnBnClickedBtnShowlist()
@@ -700,4 +713,111 @@ void CNetdiskClientDlg::OnBnClickedBtnShowicon()
 void CNetdiskClientDlg::OnBnClickedBtnRecycle()
 {
 	// TODO: Add your control notification handler code here
+	CRecycleDlg* pRecycleDlg=new CRecycleDlg();
+	if(pRecycleDlg->DoModal() == IDOK)
+	{
+
+	}
+}
+
+//返回上一级目录
+void CNetdiskClientDlg::OnBnClickedBtnReturnback()
+{
+	// TODO: Add your control notification handler code here
+	m_bFindFileState=FALSE;
+	((CMFCButton*)GetDlgItem(IDC_BTN_UPLOADFILE))->EnableWindow(TRUE);
+	((CMFCButton*)GetDlgItem(IDC_BTN_NEWFLODER))->EnableWindow(TRUE);
+
+	if(m_strCurrentPath == m_strUserLoginName || m_strCurrentPath == m_strShareFloder)
+	{
+		m_btnReturnBack.EnableWindow(FALSE);
+		return ;
+	}
+	int pos=m_strCurrentPath.ReverseFind('\\');
+	m_strCurrentPath=m_strCurrentPath.Left(pos);
+
+	SetCatalogSelected(m_strCurrentPath);
+
+}
+
+//历史版本功能
+void CNetdiskClientDlg::OnBnClickedBtnHistory()
+{
+	// TODO: Add your control notification handler code here
+	int count=0;
+	for(int i=0;i<m_lcFileShow.GetItemCount();i++)
+	{
+		if(m_lcFileShow.GetCheck(i))
+		{
+			count++;
+		}
+	}
+	if(count == 0)
+	{
+		AfxMessageBox(_T("请选择一个文件！"));
+		return ;
+	}
+	if(count > 1)
+	{
+		AfxMessageBox(_T("一次只能选择一个文件"));
+		return ;
+	}
+	for(int i=0;i<m_lcFileShow.GetItemCount();i++)
+	{
+		if(m_lcFileShow.GetCheck(i))
+		{
+			if(m_lcFileShow.GetItemText(i,1) == _T(""))
+			{
+				AfxMessageBox(_T("请选择一个文件！"));
+				return ;
+			}
+		}
+	}
+
+	CHistroyVersionDlg* pHisVersionDlg=new CHistroyVersionDlg();
+	if(pHisVersionDlg->DoModal() == IDOK)
+	{
+
+	}
+}
+
+//查找文件操作
+void CNetdiskClientDlg::OnBnClickedBtnSearch()
+{
+	// TODO: Add your control notification handler code here
+
+	UpdateData(TRUE);
+	if(m_strSearchStr == _T(""))
+		return ;
+	m_bFindFileState=TRUE;
+	((CMFCButton*)GetDlgItem(IDC_BTN_UPLOADFILE))->EnableWindow(FALSE);
+	((CMFCButton*)GetDlgItem(IDC_BTN_NEWFLODER))->EnableWindow(FALSE);
+	CSearchFile* pSearch=new CSearchFile();
+	pSearch->SendSearchStr(m_strSearchStr);
+}
+
+//查找状态下一次只能处理一个文件或者文件夹操作
+void CNetdiskClientDlg::OnNMClickListFile(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	// TODO: Add your control notification handler code here
+	//查找状态下
+	if(m_bFindFileState)
+	{
+		int checkItem=pNMItemActivate->iItem;
+		if(!m_lcFileShow.GetCheck(checkItem))
+		{
+			for(int i=0; i<m_lcFileShow.GetItemCount(); i++)
+				m_lcFileShow.SetCheck(i,0);
+			m_lcFileShow.SetCheck(checkItem,1);
+		}
+		//设置当前路径
+		CString tmpPath;
+		m_pSearchFile->m_pMapFilePath->Lookup(m_lcFileShow.GetItemText(checkItem,0)+_T("|")+m_lcFileShow.GetItemText(checkItem,2),tmpPath);
+		int pos=tmpPath.Find(m_strUserLoginName);
+		tmpPath=tmpPath.Right(tmpPath.GetLength()-pos);
+		pos=tmpPath.ReverseFind('\\');
+		m_strCurrentPath=tmpPath.Left(pos);
+	}
+	*pResult = 0;
 }

@@ -9,8 +9,10 @@
 
 CServIndex::CServIndex()
 {
-	m_strRootPath=_T("E:\\企业网盘目录\\");
-	m_strIndexPath=_T("E:\\企业网盘目录\\本地索引目录\\");
+	m_strRootPath=_T("E:\\企业网盘目录\\网盘用户\\");
+	m_strIndexPath=_T("E:\\企业网盘目录\\网盘用户索引目录\\");
+	m_strRecyclePath=_T("E:\\企业网盘目录\\回收站\\");
+	m_strRecycleIndexPath=_T("E:\\企业网盘目录\\回收站索引目录\\");
 	m_catalogIndexHead=new CCatalogIndex();
 	
 }
@@ -40,7 +42,6 @@ int CServIndex::getSubCatalogCount(CCatalogIndex* catalogHead)
 
 	return count;
 }
-
 
 //获取同级目录数
 int CServIndex::getNextCatalogCount(CCatalogIndex* catalogHead)
@@ -280,18 +281,22 @@ void CServIndex::readNextCatalogInfo(CCatalogIndex* catalogHead,CFile* pcFile)
 }
 
 //创建、更新用户索引文件
-BOOL CServIndex::UpdateIndex(CString rootName)
+BOOL CServIndex::UpdateIndex(CString rootPath,CString indexPath,CString rootName)
 {
-	CString path=m_strIndexPath;
+	//CString path=m_strIndexPath;
+	CString path=indexPath;
 	path+=rootName+_T(".txt");
 
 	setlocale( LC_CTYPE, ("chs"));
 	CStdioFile pStdioFile;
 	if(pStdioFile.Open(path,CFile::modeCreate|CFile::modeWrite))
 	{
+		m_catalogIndexHead->m_NextCatalog=NULL;
+		m_catalogIndexHead->m_subCatalog=NULL;
+		m_catalogIndexHead->m_subFile=NULL;
 
 		//更新索引信息
-		UpdateIndexList(m_strRootPath+rootName,m_catalogIndexHead);
+		UpdateIndexList(rootPath+rootName,m_catalogIndexHead);
 		writeNextCatalogInfo(m_catalogIndexHead->m_subCatalog,&pStdioFile);
 		writeSubFileInfo(m_catalogIndexHead->m_subFile,&pStdioFile);
 		//AfxMessageBox(_T("索引文件创建成功!"));
@@ -318,6 +323,8 @@ void CServIndex::UpdateIndexList(CString rootPath,CCatalogIndex* catalogIndexHea
 {
 	BuildSubCatalogAndFileList(rootPath,catalogIndexHead);
 	CCatalogIndex* tmp=catalogIndexHead->m_subCatalog;
+	if(tmp == NULL)
+		return ;
 	RecurBuildCatalogList(tmp->m_strPath,tmp);
 	/*while(tmp!=NULL)
 	{
@@ -423,7 +430,7 @@ void CServIndex::BuildSubCatalogAndFileList(CString rootPath,CCatalogIndex* root
 			//CatalogIndexItem->m_strParentCatalogName=finder.GetRoot();
 			CatalogIndexItem->m_strPath=strTmpDir;
 			finder.GetLastWriteTime(tmpTime);
-			tmpStr = tmpTime.Format(_T("%c"));
+			tmpStr = tmpTime.Format(_T("%Y/%m/%d %H:%M:%S"));
 			_tprintf_s(_T("%s\n"), (LPCTSTR) tmpStr);
 			CatalogIndexItem->m_strEditTime=tmpStr;
 			CatalogIndexItem->m_bIsShare=FALSE;
@@ -458,7 +465,7 @@ void CServIndex::BuildSubCatalogAndFileList(CString rootPath,CCatalogIndex* root
 			//fileIndexItem->m_strParentCatalogName=finder.GetRoot();
 			fileIndexItem->m_strPath=finder.GetFilePath();
 			finder.GetLastAccessTime(tmpTime);
-			tmpStr = tmpTime.Format(_T("%c"));
+			tmpStr = tmpTime.Format(_T("%Y/%m/%d %H:%M:%S"));
 			_tprintf_s(_T("%s\n"), (LPCTSTR) tmpStr);
 			fileIndexItem->m_strEditTime=tmpStr;
 			ULONGLONG fileSize=finder.GetLength();
@@ -521,9 +528,9 @@ BOOL CServIndex::IsDirecEmpty(CString path)
 // CServIndex member functions
 
 //获取用户索引信息
-CString CServIndex::GetIndexInfo(CString &rootName)
+CString CServIndex::GetIndexInfo(CString indexPath,CString &rootName)
 {
-	CString path=m_strIndexPath;
+	CString path=indexPath;
 	path += rootName+_T(".txt");
 	setlocale( LC_CTYPE, ("chs"));
 
@@ -545,20 +552,20 @@ CString CServIndex::GetIndexInfo(CString &rootName)
 }
 
 //获取某一个目录下的文件和文件夹信息
-CString CServIndex::getCatalogInfo(CString floderPath)
+CString CServIndex::getCatalogInfo(CString rootPath,CString indexPath,CString floderPath)
 {
 	if(floderPath==_T(""))
 		return _T("");
 
 	CString	indexInfo=_T("");
-	CString servFloderPath=m_strRootPath+floderPath;
+	CString servFloderPath=rootPath+floderPath;
 	int pos=floderPath.Find('\\');
 	CString tmpStr,tmpName,tmpPath;
 	CString oneIndexInfo;
 	if(-1!=pos)
-		tmpStr=GetIndexInfo(floderPath.Left(pos));
+		tmpStr=GetIndexInfo(indexPath,floderPath.Left(pos));
 	else
-		tmpStr=GetIndexInfo(floderPath);
+		tmpStr=GetIndexInfo(indexPath,floderPath);
 
 	CArray<CString,CString&> *oneIndexInfoArr=new CArray<CString,CString&>();
 
@@ -648,4 +655,108 @@ CString CServIndex::GetOneIndexInfo(CString srcStr,int &iPos)
 	iPos=pos;
 
 	return tmpStr.Left(pos+1);
+}
+
+//查找索引记录
+CString CServIndex::FindFileIndex(CString indexPath,CString rootName,CString findStr)
+{
+	CString indexInfo=GetIndexInfo(indexPath,rootName);
+	CArray<CString,CString&>* pIndexInfoArr=new CArray<CString,CString&>();
+	int pos;
+	CString retIndexInfo;
+	while(indexInfo.GetLength() > 0)
+	{
+		pos=indexInfo.Find(';');
+		pIndexInfoArr->Add(indexInfo.Left(pos));
+		indexInfo=indexInfo.Right(indexInfo.GetLength()-pos-1);
+	}
+
+	int count=pIndexInfoArr->GetCount();
+	if(count == 0)
+		return _T("");
+	CString tmpName,tmpPath;
+	for(int i=0;i<count;i++)
+	{
+		//如果查找的是用户网盘目录下的文件
+		if(m_strIndexPath == indexPath)
+		{
+			tmpName=GetCatalogName(pIndexInfoArr->GetAt(i));
+			if(-1 != tmpName.Find(findStr))
+				retIndexInfo=retIndexInfo+pIndexInfoArr->GetAt(i)+_T(";");
+
+		}
+		//如果查找的是回收站目录下的文件
+		if(m_strRecycleIndexPath == indexPath)
+		{
+			tmpPath=GetPath(pIndexInfoArr->GetAt(i));
+			tmpName=GetCatalogName(pIndexInfoArr->GetAt(i));
+			CString cmpStr=m_strRecyclePath+rootName;
+			if(tmpPath.GetLength() == cmpStr.GetLength()+1+tmpName.GetLength())
+			{
+				if(-1 != tmpName.Find(findStr))
+					retIndexInfo=retIndexInfo+pIndexInfoArr->GetAt(i)+_T(";");
+			}
+		}
+	}
+	return retIndexInfo;
+}
+
+//按时间查找索引记录
+CString CServIndex::FindFileByTime(CString CurrentPath,CString strStartTime,CString StrEndTime)
+{
+	int pos;
+	CString rootName;
+	pos=CurrentPath.Find('\\');
+	if(pos == -1)
+		rootName=CurrentPath;
+	else
+		rootName=CurrentPath.Left(pos);
+	CString indexInfo=GetIndexInfo(m_strIndexPath,rootName);
+
+	CArray<CString,CString&>* pIndexInfoArr=new CArray<CString,CString&>();
+	CString retIndexInfo;
+	while(indexInfo.GetLength() > 0)
+	{
+		pos=indexInfo.Find(';');
+		pIndexInfoArr->Add(indexInfo.Left(pos));
+		indexInfo=indexInfo.Right(indexInfo.GetLength()-pos-1);
+	}
+
+	int count=pIndexInfoArr->GetCount();
+	if(count == 0)
+		return _T("");
+	CString tmpTime,tmpPath,strPath;
+	strPath=m_strRootPath+CurrentPath;
+	for(int i=0;i<count;i++)
+	{
+		tmpPath=GetPath(pIndexInfoArr->GetAt(i));
+		tmpTime=GetTime(pIndexInfoArr->GetAt(i));
+
+		if((tmpTime<=StrEndTime && tmpTime>=strStartTime) && 0 == tmpPath.Find(strPath))
+			retIndexInfo=retIndexInfo+pIndexInfoArr->GetAt(i)+_T(";");
+	}
+
+	return retIndexInfo;
+}
+
+//获取索引中的时间字符串
+CString CServIndex::GetTime(CString srcStr)
+{
+	int count;
+	if(srcStr[0] == 'D')
+		count = 5;
+	if(srcStr[0] == 'F')
+		count=3;
+
+	int pos;
+	CString tmpStr=srcStr;
+	for(int i=0;i<count;i++)
+	{
+		pos=tmpStr.Find('|');
+		tmpStr=tmpStr.Right(tmpStr.GetLength()-pos-1);
+	}
+	pos=tmpStr.Find('|');
+	tmpStr=tmpStr.Left(pos);
+	pos=tmpStr.Find(' ');
+	return tmpStr.Left(pos);
 }

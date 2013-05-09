@@ -52,19 +52,8 @@ void CNewFloderDlg::OnBnClickedBtnOk()
 	CString path=m_pMainDlg->m_strCurrentPath+_T("\\")+m_strNewFloderName;
 	if(m_pMainDlg->m_Client.CreateNewFloder(path))
 	{
-		//获取文件列表显示
-		if(m_pMainDlg->m_Client.GetCatalogInfo(m_pMainDlg->m_strCurrentPath))
-		{
-			m_pMainDlg->m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-			m_pMainDlg->ShowFileList(m_pMainDlg->m_strIndexInfo);
-		}
-		//更新目录结构显示
-		if(m_pMainDlg->m_Client.UpdateClientCatalog())
-		{
-			m_pMainDlg->m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-			m_pMainDlg->m_pCatShowDlg->UpdateCatalogShow(m_pMainDlg->m_strIndexInfo);
-
-		}
+		//更新客户端显示
+		m_pMainDlg->OnBnClickedBtnRefresh();
 	}
 
 	CDialogEx::OnOK();

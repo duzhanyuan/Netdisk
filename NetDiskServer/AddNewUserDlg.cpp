@@ -21,6 +21,8 @@ CAddNewUserDlg::CAddNewUserDlg(CWnd* pParent /*=NULL*/)
 	m_strUserFileSavePath = _T("");
 	m_strUserPasswd = _T("");
 	m_strComfPwd = _T("");
+
+	m_strRecyPath=_T("E:\\企业网盘目录\\回收站");
 }
 
 CAddNewUserDlg::~CAddNewUserDlg()
@@ -143,6 +145,9 @@ void CAddNewUserDlg::OnBnClickedOk()
 		
 		tmpSql.Format(_T("insert netdisk_user_tb value ('%s','%d','%s','%s','%s')"),m_strUserServAddr,m_iUserServPort,m_strUserName,m_strUserPasswd,m_strUserFileSavePath);
 		db.ExecuteSQL(tmpSql);
+
+		//添加用户的回收站文件夹
+		CreateDirectory(m_strRecyPath+_T("\\")+m_strUserName,NULL);
 	}
 	catch(CDBException* pe)
 	{

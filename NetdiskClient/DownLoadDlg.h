@@ -1,7 +1,7 @@
 #pragma once
 class CNetdiskClientDlg;
-
 // CDownLoadDlg dialog
+
 
 class CDownLoadDlg : public CDialogEx
 {
@@ -21,15 +21,21 @@ protected:
 public:
 	afx_msg void OnBnClickedOk();
 	CTreeCtrl m_tcDownLoadDes;
-	CProgressCtrl m_progDownload;
+//	CProgressCtrl m_progDownload;
 	virtual BOOL OnInitDialog();
 	afx_msg void OnBnClickedButton1();
 	afx_msg void OnTimer(UINT nIDEvent);
 	void	RecvDownLoadFile(CString path);		//下载文件
 	void	RecvDownLoadCat(CString catalogName);		//下载目录
+	static DWORD WINAPI DownLoadThread(LPVOID lpParam);
+	void ResetCurFileDL(void);
 //	CString m_str;
 	CString m_strSavePath;
 	CNetdiskClientDlg* m_pMainDlg;
 	u_long	m_ulFileSize;
 	u_long	m_ulCurTotal;
+//	CString m_strDownloadMsg;
+	CListBox m_lbDownloadMsg;
+	CButton m_btnOK;
+	CProgressCtrl m_progDownload;
 };

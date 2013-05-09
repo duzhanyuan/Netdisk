@@ -184,6 +184,7 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="..\NetdiskClient\ReadMe.txt" />
     <None Include="ReadMe.txt" />
     <None Include="res\NetDiskServer.ico" />
     <None Include="res\NetDiskServer.rc2" />
@@ -194,9 +195,12 @@
     <ClInclude Include="CatalogIndex.h" />
     <ClInclude Include="FileIndex.h" />
     <ClInclude Include="FileTranfer.h" />
+    <ClInclude Include="HistroyVersionIndex.h" />
     <ClInclude Include="LoaclFileOpr.h" />
+    <ClInclude Include="md5.h" />
     <ClInclude Include="NetDiskServer.h" />
     <ClInclude Include="NetDiskServerDlg.h" />
+    <ClInclude Include="RecycleFileHistriyPath.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ServerContrl.h" />
     <ClInclude Include="ServIndex.h" />
@@ -212,9 +216,12 @@
     <ClCompile Include="CatalogIndex.cpp" />
     <ClCompile Include="FileIndex.cpp" />
     <ClCompile Include="FileTranfer.cpp" />
+    <ClCompile Include="HistroyVersionIndex.cpp" />
     <ClCompile Include="LoaclFileOpr.cpp" />
+    <ClCompile Include="md5.cpp" />
     <ClCompile Include="NetDiskServer.cpp" />
     <ClCompile Include="NetDiskServerDlg.cpp" />
+    <ClCompile Include="RecycleFileHistriyPath.cpp" />
     <ClCompile Include="ServerContrl.cpp" />
     <ClCompile Include="ServIndex.cpp" />
     <ClCompile Include="SetDeprtNameDlg.cpp" />

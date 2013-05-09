@@ -6,8 +6,9 @@
 #include "NetdiskClient.h"
 #include "NetdiskClientDlg.h"
 #include "UserLoginDlg.h"
+
 #ifdef _DEBUG
-#define new DEBUG_NEW
+#define new DEBUG_NEW	
 #endif
 
 
@@ -110,3 +111,10 @@ BOOL CNetdiskClientApp::InitInstance()
 	return FALSE;
 }
 
+
+
+int CNetdiskClientApp::ExitInstance()
+{
+	// TODO: Add your specialized code here and/or call the base class
+	return CWinApp::ExitInstance();
+}

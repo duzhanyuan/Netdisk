@@ -50,7 +50,7 @@ BOOL CCatalogShowDlg::OnInitDialog()
 	//初始化当前默认路径
 	m_strUserLoginName=((CNetdiskClientApp*)AfxGetApp())->m_loginName;
 	m_Client=m_MainDlg->m_Client;
-
+	m_strShareFloder=m_MainDlg->m_strShareFloder;
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
@@ -77,7 +77,7 @@ void CCatalogShowDlg::OnSize(UINT nType, int cx, int cy)
 }
 
 //更新目录显示
-void CCatalogShowDlg::UpdateCatalogShow(CString indexInfo)
+void CCatalogShowDlg::UpdateCatalogShow(HTREEITEM rootNode,CString indexInfo)
 {
 	//if(indexInfo==_T(""))
 	//	return;
@@ -85,7 +85,8 @@ void CCatalogShowDlg::UpdateCatalogShow(CString indexInfo)
 	CString tmpCurrentPath=m_strCurrentPath;
 
 	//清空根目录下的目录结构
-	DeleteSubRoot(m_MyDisk);
+
+	DeleteSubRoot(rootNode);
 
 	CArray<CString,CString&> *oneIndexInfoArr=new CArray<CString,CString&>();
 	//CArray<CString,CString&> *insertedIndexArr=new CArray<CString,CString&>();
@@ -116,9 +117,11 @@ void CCatalogShowDlg::UpdateCatalogShow(CString indexInfo)
 		}
 	
 	}
-
 	totalNum=oneIndexInfoArr->GetCount();
-	HTREEITEM root=m_CatalogShow.InsertItem(GetCatalogName(oneIndexInfoArr->GetAt(0)),m_MyDisk);
+	//没有子文件夹
+	if(totalNum == 0)
+		return;
+	HTREEITEM root=m_CatalogShow.InsertItem(GetCatalogName(oneIndexInfoArr->GetAt(0)),rootNode);
 	catalogRootArr->Add(root);
 	bool flag;
 
@@ -133,7 +136,6 @@ void CCatalogShowDlg::UpdateCatalogShow(CString indexInfo)
 			if(-1!=pos&&oneIndexInfoArr->GetAt(j)[pos-1]==_T('|')&&oneIndexInfoArr->GetAt(j)[pos+parPath.GetLength()]==_T('|'))
 			{
 				root=m_CatalogShow.InsertItem(GetCatalogName(oneIndexInfoArr->GetAt(i)),catalogRootArr->GetAt(j));
-				m_iMyDiskCount++;
 				catalogRootArr->Add(root);
 				flag=true;
 				break;
@@ -141,17 +143,20 @@ void CCatalogShowDlg::UpdateCatalogShow(CString indexInfo)
 		}
 		if(!flag)
 		{
-			root=m_CatalogShow.InsertItem(GetCatalogName(oneIndexInfoArr->GetAt(i)),m_MyDisk);
-			m_iMyDiskCount++;			
+			root=m_CatalogShow.InsertItem(GetCatalogName(oneIndexInfoArr->GetAt(i)),rootNode);
 			catalogRootArr->Add(root);
 			flag=true;
 		}
 	}
-	m_CatalogShow.Expand(m_MyDisk,TVE_EXPAND);
+	m_CatalogShow.Expand(rootNode,TVE_EXPAND);
 	m_CatalogShow.SetImageList(&m_MainDlg->m_cSysIcon.m_ImageSmallList,TVSIL_NORMAL); 
 	m_strCurrentPath=tmpCurrentPath;
-	SetSelectByFileListClick(m_strCurrentPath);
+	
+	m_MainDlg->SetCatalogSelected(m_strCurrentPath);
+	//if(0 == m_strCurrentPath.Find(m_CatalogShow.GetItemText(rootNode)))
+	//	SetSelectByFileListClick(rootNode,m_strCurrentPath);
 }
+
 //递归删除根目录下的目录结构
 BOOL CCatalogShowDlg::DeleteSubRoot(HTREEITEM hItem)
 {
@@ -309,20 +314,45 @@ void CCatalogShowDlg::OnTvnSelchangedTreeCatalogshow(NMHDR *pNMHDR, LRESULT *pRe
 	LPNMTREEVIEW pNMTreeView = reinterpret_cast<LPNMTREEVIEW>(pNMHDR);
 	// TODO: Add your control notification handler code here
 	HTREEITEM tHit=m_CatalogShow.GetSelectedItem();
-
+	HTREEITEM tmpItem=tHit;
 	CArray<CString,CString&>* nodeNameArr=new CArray<CString,CString&>();
-	m_strCurrentPath=m_strUserLoginName;
-	if(tHit!=m_MyDisk)
+	
+	m_MainDlg->m_bFindFileState=FALSE;
+	((CMFCButton*)m_MainDlg->GetDlgItem(IDC_BTN_UPLOADFILE))->EnableWindow(TRUE);
+	((CMFCButton*)m_MainDlg->GetDlgItem(IDC_BTN_NEWFLODER))->EnableWindow(TRUE);
+
+	if(tHit == m_MyDisk)
 	{
-		HTREEITEM tmpItem=tHit;
+		m_CatalogShow.Select(m_MyDisk, TVGN_CARET);
+		m_CatalogShow.Select(m_MyDisk, TVGN_DROPHILITE);
+		m_MainDlg->m_btnReturnBack.EnableWindow(FALSE);
+		m_strCurrentPath=m_strUserLoginName;
+
+	}
+	if(tHit == m_ShareDisk)
+	{
+		m_CatalogShow.Select(m_ShareDisk, TVGN_CARET);
+		m_CatalogShow.Select(m_ShareDisk, TVGN_DROPHILITE);
+		m_MainDlg->m_btnReturnBack.EnableWindow(FALSE);
+		m_strCurrentPath=m_strShareFloder;
+	}
+	else
+	{
+		tmpItem=tHit;
 		m_CatalogShow.Select(tmpItem, TVGN_CARET);
 		m_CatalogShow.Select(tmpItem, TVGN_DROPHILITE);
 
-		while(tmpItem!=m_MyDisk)
+		m_MainDlg->m_btnReturnBack.EnableWindow(TRUE);
+		//查找根节点
+		while(tmpItem!=m_MyDisk && tmpItem!=m_ShareDisk)
 		{
 			nodeNameArr->Add(m_CatalogShow.GetItemText(tmpItem));
 			tmpItem=m_CatalogShow.GetParentItem(tmpItem);
 		}
+		if(tmpItem == m_MyDisk)
+			m_strCurrentPath=m_strUserLoginName;
+		if(tmpItem == m_ShareDisk)
+			m_strCurrentPath=m_strShareFloder;
 
 		for(int i=nodeNameArr->GetCount()-1;i>=0;i--)
 		{
@@ -336,15 +366,48 @@ void CCatalogShowDlg::OnTvnSelchangedTreeCatalogshow(NMHDR *pNMHDR, LRESULT *pRe
 		m_MainDlg->m_pHisPathTail->next=tmpHistroyPath;
 		m_MainDlg->m_pHisPathTail=tmpHistroyPath;
 	}
-	else
-	{
-		m_CatalogShow.Select(m_MyDisk, TVGN_CARET);
-		m_CatalogShow.Select(m_MyDisk, TVGN_DROPHILITE);
-	}
+
+	//if(tHit!=m_MyDisk)
+	//{
+	//	HTREEITEM tmpItem=tHit;
+	//	m_CatalogShow.Select(tmpItem, TVGN_CARET);
+	//	m_CatalogShow.Select(tmpItem, TVGN_DROPHILITE);
+
+	//	m_MainDlg->m_btnReturnBack.EnableWindow(TRUE);
+
+	//	while(tmpItem!=m_MyDisk)
+	//	{
+	//		nodeNameArr->Add(m_CatalogShow.GetItemText(tmpItem));
+	//		tmpItem=m_CatalogShow.GetParentItem(tmpItem);
+	//	}
+
+	//	for(int i=nodeNameArr->GetCount()-1;i>=0;i--)
+	//	{
+	//		m_strCurrentPath=m_strCurrentPath+_T("\\")+nodeNameArr->GetAt(i);
+	//	}
+
+	//	//将本次操作路径添加到历史路径数组中
+	//	HistroyPath* tmpHistroyPath=new HistroyPath();
+	//	tmpHistroyPath->path=m_strCurrentPath;
+	//	tmpHistroyPath->next=NULL;
+	//	m_MainDlg->m_pHisPathTail->next=tmpHistroyPath;
+	//	m_MainDlg->m_pHisPathTail=tmpHistroyPath;
+	//}
+	//if(tHit == m_MyDisk)
+	//{
+	//	m_CatalogShow.Select(m_MyDisk, TVGN_CARET);
+	//	m_CatalogShow.Select(m_MyDisk, TVGN_DROPHILITE);
+	//	m_MainDlg->m_btnReturnBack.EnableWindow(FALSE);
+
+	//}
+	//if(tHit == m_ShareDisk)
+	//{
+
+	//}
 	if(m_Client.GetCatalogInfo(m_strCurrentPath))
 	{
 		m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-		m_MainDlg->ShowFileList(m_strIndexInfo);
+		m_MainDlg->ShowFileList(&m_MainDlg->m_lcFileShow,m_strIndexInfo);
 	}
 	
 	//更新到主窗口的路径显示中去
@@ -358,10 +421,10 @@ void CCatalogShowDlg::OnTvnSelchangedTreeCatalogshow(NMHDR *pNMHDR, LRESULT *pRe
 }
 
 //双击文件列表时，目录同步显示该文件夹
-void CCatalogShowDlg::SetSelectByFileListClick(CString path)
+void CCatalogShowDlg::SetSelectByFileListClick(HTREEITEM rootNode,CString path)
 {
-	HTREEITEM tmpRoot=m_CatalogShow.GetChildItem(m_MyDisk);
-	CString tmpPath=m_strUserLoginName;
+	HTREEITEM tmpRoot=m_CatalogShow.GetChildItem(rootNode);
+	CString tmpPath=(m_CatalogShow.GetItemText(rootNode)==m_strShareFloder?m_strShareFloder:m_strUserLoginName);
 	if(path!=tmpPath)
 	{
 		int pos;
@@ -385,7 +448,7 @@ void CCatalogShowDlg::SetSelectByFileListClick(CString path)
 		}
 	}
 	else
-		tmpRoot=m_MyDisk;
+		tmpRoot=rootNode;
 	m_CatalogShow.Select(tmpRoot, TVGN_CARET);
 	m_CatalogShow.Select(tmpRoot, TVGN_DROPHILITE);
 	//设置展开属性

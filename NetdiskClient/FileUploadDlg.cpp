@@ -340,7 +340,7 @@ DWORD WINAPI CFileUploadDlg::UploadThread(LPVOID lpParam)
 			if(pClient->GetCatalogInfo(pMainDlg->m_strCurrentPath))
 			{
 				pMainDlg->m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-				pMainDlg->ShowFileList(pMainDlg->m_strIndexInfo);
+				pMainDlg->ShowFileList(&pMainDlg->m_lcFileShow,pMainDlg->m_strIndexInfo);
 			}
 		}
 

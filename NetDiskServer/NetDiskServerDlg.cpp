@@ -12,6 +12,9 @@
 #include "AdminLoginDlg.h"
 #include "AddNewUserDlg.h"
 #include "ServIndex.h"
+#include "md5.h"
+
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -58,6 +61,20 @@ CNetDiskServerDlg::CNetDiskServerDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(CNetDiskServerDlg::IDD, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_strUserDiskRootPath=_T("E:\\企业网盘目录\\网盘用户\\");
+	m_strUserDiskIndexPath=_T("E:\\企业网盘目录\\网盘用户索引目录\\");
+	m_strRecycleRootPath=_T("E:\\企业网盘目录\\回收站\\");
+	m_strRecycleIndexPath=_T("E:\\企业网盘目录\\回收站索引目录\\");
+	m_strShareRootPath=_T("E:\\企业网盘目录\\共享文件夹\\");
+	m_strShareIndexPath=_T("E:\\企业网盘目录\\共享文件夹索引目录\\");
+	//创建共享文件夹的目录和目录索引
+	CStdioFile stdioFile;
+	CString tmpStr;
+	tmpStr.Format(_T("__%s__.txt"),_T("共享文件夹"));
+	if(stdioFile.Open(m_strUserDiskIndexPath+tmpStr,CFile::modeCreate))
+	{
+		CreateDirectory(m_strUserDiskRootPath+_T("共享文件夹"),NULL);
+	}
 }
 //CNetDiskServerDlg::CNetDiskServerDlg(CString strCompyName)
 //{
@@ -269,7 +286,7 @@ void CNetDiskServerDlg::OnBtnAdduser()
 
 		//添加用户目录索引文件
 		CServIndex userIndex;
-		if(!userIndex.UpdateIndex(strAddUser))
+		if(!userIndex.UpdateIndex(m_strUserDiskRootPath,m_strUserDiskIndexPath,strAddUser))
 		{
 			AfxMessageBox(_T("创建用户目录索引失败！"));
 			return ;
@@ -349,7 +366,7 @@ void CNetDiskServerDlg::OnBnClickedMfcbtnDeldeprt()
 	CServIndex* tmpServIndex=new CServIndex();
 	CString userName=_T("user");
 	//CString indexStr=tmpServIndex->GetIndexInfo(userName);
-	tmpServIndex->UpdateIndex(_T("user"));
+	tmpServIndex->UpdateIndex(m_strUserDiskRootPath,m_strUserDiskIndexPath,_T("user"));
 	//tmpServIndex->FindSubCatalogAndFile(tmpServIndex->m_strRootPath+_T("user"),tmpServIndex->m_catalogIndexHead);
 	//tmpServIndex->UpdateIndex(tmpServIndex->m_strRootPath+_T("user"),tmpServIndex->m_catalogIndexHead);
 	//CString tmp=tmpServIndex->m_strIndexPath+_T("user.txt");

@@ -8,6 +8,7 @@
 #include "NetdiskClientDlg.h"
 
 // CDownLoadDlg dialog
+#define TIMER 1 
 
 IMPLEMENT_DYNAMIC(CDownLoadDlg, CDialogEx)
 
@@ -18,6 +19,7 @@ CDownLoadDlg::CDownLoadDlg(CWnd* pParent /*=NULL*/)
 	m_strSavePath = _T("");
 	m_ulFileSize = 0;
 	m_ulCurTotal = 0;
+	//  m_strDownloadMsg = _T("");
 }
 
 CDownLoadDlg::~CDownLoadDlg()
@@ -30,6 +32,10 @@ void CDownLoadDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_DOWNLOADPRO, m_progDownload);
 	//  DDX_Text(pDX, IDC_EDIT_SAVEPATH, m_str);
 	DDX_Text(pDX, IDC_EDIT_SAVEPATH, m_strSavePath);
+	//  DDX_LBString(pDX, IDC_LIST_DOWNLOADMSG, m_strDownloadMsg);
+	DDX_Control(pDX, IDC_LIST_DOWNLOADMSG, m_lbDownloadMsg);
+	DDX_Control(pDX, IDOK, m_btnOK);
+	DDX_Control(pDX, IDC_DOWNLOADPRO, m_progDownload);
 }
 
 
@@ -53,37 +59,71 @@ void CDownLoadDlg::OnBnClickedOk()
 	//	{
 	//	}
 	//}
+	if(m_strSavePath == _T(""))
+	{
+		AfxMessageBox(_T("请选择要存放的目录"));
+		return;
+	}
+
+	//获取总下载文件大小
 	for(int i=0;i<m_pMainDlg->m_lcFileShow.GetItemCount();i++)
 	{
 		if(m_pMainDlg->m_lcFileShow.GetCheck(i))
 		{
-			CString fileName=m_pMainDlg->m_lcFileShow.GetItemText(i,0);
-			CString path=m_pMainDlg->m_strCurrentPath+_T("\\")+fileName;
+
+			//获取下载大小
+			m_pMainDlg->m_Client.GetFileSizeFromServ(m_pMainDlg->m_strCurrentPath+_T("\\")+m_pMainDlg->m_lcFileShow.GetItemText(i,0));
+			CString strFilesize=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
+			m_ulFileSize +=_ttoi64(strFilesize);
+		}
+	}
+
+	//创建下载线程
+	HANDLE hDlHandle=CreateThread(0,0,DownLoadThread,this,0,0);
+	CloseHandle(hDlHandle);
+
+	
+}
+
+DWORD WINAPI CDownLoadDlg::DownLoadThread(LPVOID lpParam)
+{
+	CDownLoadDlg* pDownLoadDlg = (CDownLoadDlg*)lpParam;
+	CString msg;
+	CString fileName;
+
+	for(int i=0;i<pDownLoadDlg->m_pMainDlg->m_lcFileShow.GetItemCount();i++)
+	{
+		if(pDownLoadDlg->m_pMainDlg->m_lcFileShow.GetCheck(i))
+		{
+			fileName=pDownLoadDlg->m_pMainDlg->m_lcFileShow.GetItemText(i,0);
+			CString path=pDownLoadDlg->m_pMainDlg->m_strCurrentPath+_T("\\")+fileName;
 			//下载目录
-			if(m_pMainDlg->m_lcFileShow.GetItemText(i,1)==_T(""))
+			if(pDownLoadDlg->m_pMainDlg->m_lcFileShow.GetItemText(i,1)==_T(""))
 			{
-				m_pMainDlg->m_Client.SendMsgToServ(path,DOWNLOADCATALOG);
-				CString catPath=m_strSavePath+_T("\\")+fileName;
+				pDownLoadDlg->m_pMainDlg->m_Client.SendMsgToServ(path,DOWNLOADCATALOG);
+				CString catPath=pDownLoadDlg->m_strSavePath+_T("\\")+fileName;
 				if(CreateDirectory(catPath,NULL))
 				{
-					RecvDownLoadCat(catPath);
+					pDownLoadDlg->RecvDownLoadCat(catPath);
 				}
 			}
 			//下载文件
 			else
 			{
-				m_pMainDlg->m_Client.SendMsgToServ(path,DOWNLOADFILE);
-				CString filepath=m_strSavePath+_T("\\")+fileName;
-				RecvDownLoadFile(filepath);
+				pDownLoadDlg->m_pMainDlg->m_Client.SendMsgToServ(path,DOWNLOADFILE);
+				CString filepath=pDownLoadDlg->m_strSavePath+_T("\\")+fileName;
+				pDownLoadDlg->RecvDownLoadFile(filepath);
 			}
 
+			msg.Format(_T("%s 已经下载完成"),fileName);
+			pDownLoadDlg->m_lbDownloadMsg.InsertString(pDownLoadDlg->m_lbDownloadMsg.GetCount(),msg);
 
+			//pDownLoadDlg->UpdateData(FALSE);
 		}
 	}
-
-	//CDialogEx::OnOK();
-	//m_progDownload.ShowWindow(SW_SHOW);
-	AfxMessageBox(_T("下载成功！"));
+	
+	pDownLoadDlg->ResetCurFileDL();
+	return 0;
 }
 
 //下载目录
@@ -193,8 +233,20 @@ BOOL CDownLoadDlg::OnInitDialog()
 	m_progDownload.ShowWindow(SW_HIDE);
 	m_pMainDlg=(CNetdiskClientDlg*)AfxGetMainWnd();
 	// TODO:  Add extra initialization here
-	SetTimer(1,10,NULL);
+	SetTimer(TIMER,10,NULL);
+	m_btnOK.EnableWindow(TRUE);
+	//显示信息
+	CString msg;
+	for(int i=0;i<m_pMainDlg->m_lcFileShow.GetItemCount();i++)
+	{
+		if(m_pMainDlg->m_lcFileShow.GetCheck(i))
+		{
+			msg.Format(_T("%s 已添加，等待下载..."),m_pMainDlg->m_lcFileShow.GetItemText(i,0));
+			m_lbDownloadMsg.InsertString(m_lbDownloadMsg.GetCount(),msg);
+			//UpdateData(FALSE);
 
+		}
+	}
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
 }
@@ -218,12 +270,16 @@ void CDownLoadDlg::OnBnClickedButton1()
 
 		UpdateData(FALSE);									//更新对话框
 	}
+	CString msg;
+	msg.Format(_T("下载文件存放目录为%s"),m_strSavePath);
+	m_lbDownloadMsg.InsertString(m_lbDownloadMsg.GetCount(),msg);
 }
 /*
  * 更新进度条
  */
 void CDownLoadDlg::OnTimer(UINT nIDEvent) 
 {
+
 	if (m_ulCurTotal > 0)//当前下载文件的字节数
 	{
 		int nPercent = (float)m_ulCurTotal / m_ulFileSize * 100;//百分比
@@ -234,4 +290,14 @@ void CDownLoadDlg::OnTimer(UINT nIDEvent)
 	}
 	
 	CDialog::OnTimer(nIDEvent);
+}
+/*
+ * 隐藏进度条控件
+ */
+void CDownLoadDlg::ResetCurFileDL(void)
+{
+	m_ulCurTotal = 0;
+	m_progDownload.SetPos(0);
+	m_progDownload.ShowWindow(SW_HIDE);
+	m_btnOK.EnableWindow(FALSE);
 }

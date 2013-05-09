@@ -44,22 +44,30 @@ BOOL CMoveFileDlg::OnInitDialog()
 	CDialogEx::OnInitDialog();
 	// TODO:  Add extra initialization here
 	m_pMainDlg=(CNetdiskClientDlg*)AfxGetMainWnd();
+	m_strShareFloder=m_pMainDlg->m_strShareFloder;
 
 	m_tcMoveFile.ModifyStyle(0,TVS_LINESATROOT|TVS_HASBUTTONS|TVS_HASLINES|TVS_SINGLEEXPAND);
 	m_MyDisk=m_tcMoveFile.InsertItem(_T("我的网盘"));
+	m_ShareDisk=m_tcMoveFile.InsertItem(_T("共享文件夹"));
 
 	//显示目录
-	if(m_pMainDlg->m_Client.UpdateClientCatalog())
+	if(m_pMainDlg->m_Client.UpdateClientCatalog(m_pMainDlg->m_strUserLoginName))
 	{
 		CString m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
-		ShowCatalog(m_strIndexInfo);
+		ShowCatalog(m_MyDisk,m_strIndexInfo);
+
+	}
+	if(m_pMainDlg->m_Client.UpdateClientCatalog(m_pMainDlg->m_strShareFloder))
+	{
+		CString m_strIndexInfo=((CNetdiskClientApp*)AfxGetApp())->m_strIndexInfo;
+		ShowCatalog(m_ShareDisk,m_strIndexInfo);
 
 	}
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
 }
 //更新目录显示
-void CMoveFileDlg::ShowCatalog(CString indexInfo)
+void CMoveFileDlg::ShowCatalog(HTREEITEM rootNode,CString indexInfo)
 {
 	//if(indexInfo==_T(""))
 	//	return;
@@ -67,7 +75,7 @@ void CMoveFileDlg::ShowCatalog(CString indexInfo)
 	//CString tmpCurrentPath=m_strCurrentPath;
 
 	//清空根目录下的目录结构
-	DeleteSubRoot(m_MyDisk);
+	DeleteSubRoot(rootNode);
 
 	CArray<CString,CString&> *oneIndexInfoArr=new CArray<CString,CString&>();
 	//CArray<CString,CString&> *insertedIndexArr=new CArray<CString,CString&>();
@@ -100,7 +108,10 @@ void CMoveFileDlg::ShowCatalog(CString indexInfo)
 	}
 
 	totalNum=oneIndexInfoArr->GetCount();
-	HTREEITEM root=m_tcMoveFile.InsertItem(GetCatalogName(oneIndexInfoArr->GetAt(0)),m_MyDisk);
+	//没有子文件夹
+	if(totalNum == 0)
+		return;
+	HTREEITEM root=m_tcMoveFile.InsertItem(GetCatalogName(oneIndexInfoArr->GetAt(0)),rootNode);
 	catalogRootArr->Add(root);
 	bool flag;
 
@@ -122,12 +133,14 @@ void CMoveFileDlg::ShowCatalog(CString indexInfo)
 		}
 		if(!flag)
 		{
-			root=m_tcMoveFile.InsertItem(GetCatalogName(oneIndexInfoArr->GetAt(i)),m_MyDisk);
+			root=m_tcMoveFile.InsertItem(GetCatalogName(oneIndexInfoArr->GetAt(i)),rootNode);
 			catalogRootArr->Add(root);
 			flag=true;
 		}
 	}
-	m_tcMoveFile.Expand(m_MyDisk,TVE_EXPAND);
+	m_tcMoveFile.Expand(rootNode,TVE_EXPAND);
+	m_tcMoveFile.SetImageList(&m_pMainDlg->m_cSysIcon.m_ImageSmallList,TVSIL_NORMAL); 
+
 	//m_strCurrentPath=tmpCurrentPath;
 	//SetSelectByFileListClick(m_strCurrentPath);
 }
@@ -217,6 +230,12 @@ void CMoveFileDlg::OnBnClickedBtnMoveok()
 		{
 			CString srcPath=m_pMainDlg->m_strCurrentPath+_T("\\")+m_pMainDlg->m_lcFileShow.GetItemText(i,0);
 			CString desPath=m_strMovePath+_T("\\")+m_pMainDlg->m_lcFileShow.GetItemText(i,0);
+
+			if(m_pMainDlg->m_strCurrentPath == m_strMovePath || 0 == m_strMovePath.Find(srcPath))
+			{
+				AfxMessageBox(_T("当前选中的路径无效，请重新选择！"));
+				return;
+			}
 			CString sendMsg=srcPath+_T("+")+desPath;
 			//发送移动文件或目录信息
 			m_pMainDlg->m_Client.MoveClientFile(sendMsg);
@@ -242,15 +261,18 @@ void CMoveFileDlg::OnTvnSelchangedTreeMovefile(NMHDR *pNMHDR, LRESULT *pResult)
 	LPNMTREEVIEW pNMTreeView = reinterpret_cast<LPNMTREEVIEW>(pNMHDR);
 	// TODO: Add your control notification handler code here
 	HTREEITEM tHit=m_tcMoveFile.GetSelectedItem();
-	m_strMovePath=m_pMainDlg->m_strUserLoginName;
 	CArray<CString,CString&>* strPathArr=new CArray<CString,CString&>();
 
 	//递归查找选中文件夹的路径
-	while(tHit!=m_MyDisk)
+	while(tHit!=m_MyDisk && tHit !=m_ShareDisk)
 	{
 		strPathArr->Add(m_tcMoveFile.GetItemText(tHit));
 		tHit=m_tcMoveFile.GetParentItem(tHit);
 	}
+	if(tHit == m_MyDisk)
+		m_strMovePath=m_pMainDlg->m_strUserLoginName;
+	if(tHit == m_ShareDisk)
+		m_strMovePath=m_pMainDlg->m_strShareFloder;
 
 	//获取选中的路径
 	for(int i=strPathArr->GetCount()-1;i>=0;i--)

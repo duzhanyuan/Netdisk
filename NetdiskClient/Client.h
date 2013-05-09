@@ -33,7 +33,7 @@ typedef enum _USERLOGIN_TYPE
 typedef enum _USER_OPR_TYPE
 {
 	LOGIN=1,							//用户登录
-	UPLOADFILE,						//上传文件
+	UPLOADFILE,							//上传文件
 	UPLOADCATLOG,						//上传文件夹
 	NEWFLODER,							//新建文件夹
 	DELETEFILE,							//删除
@@ -42,8 +42,19 @@ typedef enum _USER_OPR_TYPE
 	MOVEFILE,							//移动
 	REFRESH,							//刷新
 	HISTROYVERSION,						//历史版本
+	HIS_RESTORE,						//还原历史记录版本
+	HIS_DELETE,							//删除历史记录版本
+	HIS_CLEAR,							//清空历史记录版本
 	UPDATECLIENT,						//更新客户端显示
-	GETCATALOGINFO						//获取目录下的文件和文件夹列表
+	GETCATALOGINFO,						//获取目录下的文件和文件夹列表
+	RECYCLE_RESTORE,					//回收站还原操作
+	RECYCLE_DEL,						//回收站删除操作
+	RECYCLE_CLEAN,						//回收站清空操作
+	RECYCLE_FIND,						//回收站查找操作
+	RECYCLE_UPDATE,						//更新回收站列表
+	GETFILESIZEINFO,					//获取下载文件大小
+	FINDFILEBYSTR,						//查找文件
+	FINDFILEBYTIME						//按时间查找文件
 }USER_OPR_TYPE;
 
 typedef enum _SERV_SEND_TYPE
@@ -87,14 +98,25 @@ public:
 	bool RecvReturnMsg();				//获取服务器返回信息
 public:
 	bool UpdateClient(CString path);				//更新客户端目录文件数据
-	bool UpdateClientCatalog();			//更新客户端目录信息
+	bool UpdateClientCatalog(CString Rootpath);			//更新客户端目录信息
 	bool GetCatalogInfo(CString FloderName);						//获取目录信息
 	bool UploadClientFile();					//上传文件
 	bool DeleteClientFile(CString path);		//删除文件
 	bool MoveClientFile(CString path);			//移动文件
 	bool DownloadFile(CString path);			//下载文件
-	bool FindFile();							//查找文件
+	bool FindFileByStr(CString findStr);		//查找文件
 	bool CreateNewFloder(CString baseFloder);	//新建文件夹
+	bool RecycleDel(CString path);				//删除回收站
+	bool RecycleRestore(CString path);			//还原回收站
+	bool RecycleClean(CString path);			//清空回收站
+	bool UpdateRecycleList(CString path);		//更新回收站列表
+	bool RecycleFindFile(CString findStr);		//查找回收站文件
+	bool GetFileSizeFromServ(CString path);		//获取下载文件大小
+	bool GetHistroyVersionInfo(CString strInfo);//获取历史版本信息
+	bool ReStoreHisVerFile(CString path);		//还原历史记录版本
+	bool DeleteHisVerFile(CString path);		//删除历史记录版本
+	bool CleanHisVerFile(CString path);			//清空历史记录版本
+	bool GetFileByDataShow(CString strInfo);	//按日期查看文件
 public:
 public:
 	//CString m_strClientName;				//用户登录名

@@ -45,6 +45,12 @@ public:
 	int m_iServControl;
 //	CIOCPModel m_iocp;
 	CServerContrl m_ServContrl;
+	CString		m_strUserDiskRootPath;
+	CString		m_strUserDiskIndexPath;
+	CString		m_strRecycleRootPath;
+	CString		m_strRecycleIndexPath;
+	CString		m_strShareRootPath;
+	CString		m_strShareIndexPath;
 
 public:
 	BOOL ShowDeprtDbInfo();

@@ -5,14 +5,20 @@
 #include "NetDiskServer.h"
 #include "ServerContrl.h"
 #include "ServIndex.h"
-
+#include "RecycleFileHistriyPath.h"
+#include "HistroyVersionIndex.h"
 char Buffer[MAX_BUFFER_LEN];
 
 // CServerContrl
 
 CServerContrl::CServerContrl()
 {
-	m_strDiskRootPath=_T("E:\\企业网盘目录");
+	m_strDiskRootPath=_T("E:\\企业网盘目录\\网盘用户\\");
+	m_strDiskIndexPath=_T("E:\\企业网盘目录\\网盘用户索引目录\\");
+	m_strRecyclePath=_T("E:\\企业网盘目录\\回收站\\");
+	m_strRecycleIndexPath=_T("E:\\企业网盘目录\\回收站索引目录\\");
+	m_strHisVerRootPath=_T("E:\\企业网盘目录\\文件历史版本\\");
+	m_strShareFloder=_T("共享文件夹");
 	InitializeCriticalSection(&m_csFile);
 
 }
@@ -188,8 +194,12 @@ DWORD WINAPI CServerContrl::ServListenThread(LPVOID lpParam)
 					DataPackage recvPack;
 					DataPackage sendPack;
 					ZeroMemory(&recvPack,sizeof(recvPack));
+					CString userInfo;
 
 					int iErrCode=recv(pServCtrl->m_fdAllSocket.fd_array[i],(char*)&recvPack,sizeof(recvPack),0);
+					//获取用户发送过来的信息
+					userInfo=recvPack.sContent;
+					
 					if(0 == iErrCode)
 					{
 						AfxMessageBox(_T("连接关闭！"));
@@ -209,80 +219,42 @@ DWORD WINAPI CServerContrl::ServListenThread(LPVOID lpParam)
 					case LOGIN:
 						{
 							//连接数据库，判断接入的用户是否存在，存在则进行接收数据操作，否则继续监听
-							CString userInfo;
-							userInfo=recvPack.sContent;
 							int ret=pServCtrl->UserLogin(userInfo);
 
 							//返回用户登录信息
-							ZeroMemory(&sendPack,sizeof(sendPack));
-							sprintf(sendPack.sContent,"%d",ret);
-							sendPack.nPackLen=sizeof(sendPack);
-							int retvalue=send(pServCtrl->m_fdAllSocket.fd_array[i],(char*)&sendPack,sendPack.nPackLen,0);
-							if(SOCKET_ERROR == retvalue)
-							{
-								AfxMessageBox(_T("发送用户登录反馈失败！"));
-								return false;
-							}
-							//记录用户名称
+							CString msgStr;
+							msgStr.Format(_T("%d"),ret);
+							pServCtrl->SendDataInfo(pServCtrl->m_fdAllSocket.fd_array[i],msgStr);
+
+							//记录用户名称,用户发送过来的是“用户名：密码” 组合
 							pServCtrl->m_strUserName=userInfo.Left(userInfo.Find(':'));
 							break;
 						}
 					case UPDATECLIENT:
 						{
-							CServIndex* ServIndex=new CServIndex();
-							CString m_strUserMsg;//用户发过来的目录路径
-							m_strUserMsg=recvPack.sContent;
 							//获取该用户的目录索引信息
-							pServCtrl->m_StrIndexInfo=ServIndex->GetIndexInfo(m_strUserMsg);
+							CServIndex* ServIndex=new CServIndex();
+							pServCtrl->m_StrIndexInfo=ServIndex->GetIndexInfo(pServCtrl->m_strDiskIndexPath,userInfo);
 
-							//返回用户的目录信息
-							ZeroMemory(&sendPack,sizeof(sendPack));
-							int n=pServCtrl->m_StrIndexInfo.GetLength();
-							int len=WideCharToMultiByte(CP_ACP,0,pServCtrl->m_StrIndexInfo,pServCtrl->m_StrIndexInfo.GetLength(),NULL,0,NULL,NULL);
-							WideCharToMultiByte(CP_ACP,0,pServCtrl->m_StrIndexInfo,pServCtrl->m_StrIndexInfo.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
-							sendPack.sContent[len]='\0';
-							sendPack.nContentLen=len;
-							sendPack.nPackLen=sizeof(sendPack);
-							int retvalue=send(pServCtrl->m_fdAllSocket.fd_array[i],(char*)&sendPack,sendPack.nPackLen,0);
-							if(SOCKET_ERROR == retvalue)
-							{
-								AfxMessageBox(_T("发送用户目录信息失败！"));
-								return false;
-							}
+							//发送索引信息
+							pServCtrl->SendDataInfo(pServCtrl->m_fdAllSocket.fd_array[i],pServCtrl->m_StrIndexInfo);
+
 							break;
 						}
 					case GETCATALOGINFO:
 						{
 							CServIndex* ServIndex=new CServIndex();
-							CString m_strUserMsg;//用户发过来的目录路径
-							m_strUserMsg=recvPack.sContent;
-							pServCtrl->m_StrIndexInfo=ServIndex->getCatalogInfo(m_strUserMsg);
+							pServCtrl->m_StrIndexInfo=ServIndex->getCatalogInfo(pServCtrl->m_strDiskRootPath,pServCtrl->m_strDiskIndexPath,userInfo);
 
-							//返回用户的目录信息
-							ZeroMemory(&sendPack,sizeof(sendPack));
-							int n=pServCtrl->m_StrIndexInfo.GetLength();
-							int len=WideCharToMultiByte(CP_ACP,0,pServCtrl->m_StrIndexInfo,pServCtrl->m_StrIndexInfo.GetLength(),NULL,0,NULL,NULL);
-							WideCharToMultiByte(CP_ACP,0,pServCtrl->m_StrIndexInfo,pServCtrl->m_StrIndexInfo.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
-							sendPack.sContent[len]='\0';
-							sendPack.nContentLen=len;
-							sendPack.nPackLen=sizeof(sendPack);
+							//发送索引信息
+							pServCtrl->SendDataInfo(pServCtrl->m_fdAllSocket.fd_array[i],pServCtrl->m_StrIndexInfo);
 
-							//u_long mode = 1;
-							//ioctlsocket(pServCtrl->m_fdAllSocket.fd_array[i],FIONBIO,&mode);
-							int retvalue=send(pServCtrl->m_fdAllSocket.fd_array[i],(char*)&sendPack,sendPack.nPackLen,0);
-							if(SOCKET_ERROR == retvalue)
-							{
-								AfxMessageBox(_T("发送用户目录结构信息失败！"));
-								return false;
-							}
 							break;
 						}
 					case UPLOADFILE:
 						{
-							CString m_strUserMsg;//用户发过来的目录路径
-							m_strUserMsg=recvPack.sContent;
 							//创建文件
-							CString path=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg;
+							CString path=pServCtrl->m_strDiskRootPath+userInfo;
 							FILE* inFile;
 							char c_path[1024];
 							int n=path.GetLength();
@@ -327,17 +299,28 @@ DWORD WINAPI CServerContrl::ServListenThread(LPVOID lpParam)
 							}
 							//更新用户索引记录
 							CServIndex* ServIndex=new CServIndex();
-							ServIndex->UpdateIndex(pServCtrl->m_strUserName);
+							CString rootpath=(0 == userInfo.Find(pServCtrl->m_strUserName)?pServCtrl->m_strUserName:pServCtrl->m_strShareFloder);
+							ServIndex->UpdateIndex(pServCtrl->m_strDiskRootPath,pServCtrl->m_strDiskIndexPath,rootpath);
+
+							//添加版本信息
+							CHistroyVersionIndex* pIndex=new CHistroyVersionIndex();
+							if(!pIndex->IfFileVerExist(pServCtrl->m_strUserName,path))
+							{
+								int pos=userInfo.ReverseFind('\\');
+								CString fileName=userInfo.Right(userInfo.GetLength()-pos-1);
+								pIndex->AddIndex(pServCtrl->m_strUserName,path);
+							}
 							break;
 						}
 					case NEWFLODER:
 						{
-							CString m_strUserMsg;//用户发过来的目录路径
-							m_strUserMsg=recvPack.sContent;
 
-							CString path=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg;
+							CString path=pServCtrl->m_strDiskRootPath+userInfo;
 							if(!CreateDirectory(path,NULL))
 							{
+								//////////////////////////////////////////////////////////////////////////
+								//返回一个错误消息
+								//////////////////////////////////////////////////////////////////////////
 								CString msgStr;
 								msgStr.Format(_T("创建文件夹失败，错误代码为：%s"),GetLastError());
 								return false;
@@ -345,43 +328,70 @@ DWORD WINAPI CServerContrl::ServListenThread(LPVOID lpParam)
 
 							//更新用户索引记录
 							CServIndex* ServIndex=new CServIndex();
-							ServIndex->UpdateIndex(pServCtrl->m_strUserName);
+							CString rootpath=(0 == userInfo.Find(pServCtrl->m_strUserName)?pServCtrl->m_strUserName:pServCtrl->m_strShareFloder);
+							ServIndex->UpdateIndex(pServCtrl->m_strDiskRootPath,pServCtrl->m_strDiskIndexPath,rootpath);
+
 
 							break;
 						}
 					case DELETEFILE:
 						{
-							CString m_strUserMsg;//用户发过来的目录路径
-							m_strUserMsg=recvPack.sContent;
-							
-							CString path=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg;
+							CString path=pServCtrl->m_strDiskRootPath+userInfo;
+							int pos=userInfo.ReverseFind('\\');
+
+							//所有删除的文件均保存在回收站用户目录下的二级目录
+							CString tmpStr=pServCtrl->m_strUserName+_T("\\")+userInfo.Right(userInfo.GetLength()-pos-1);
+							CString recyPath=pServCtrl->m_strRecyclePath+tmpStr;
+
+							//创建历史文件索引
+							CRecycleFileHistriyPath* pRecyleFileHisPath=new CRecycleFileHistriyPath(pServCtrl->m_strUserName);
+							//添加一个索引项
+							pRecyleFileHisPath->AddIndex(recyPath,path);
+
 							//判断删除的是文件还是文件夹
 							DWORD value = GetFileAttributes(path);
 							if( (value & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY )
-								pServCtrl->	RecursiveDelete(path);
-							else
-								DeleteFile(path);
+								pServCtrl->	RecursiveMove(path,recyPath);
+							else//移动到回收站
+							{
+								//判断文件是否存在回收站内,如果不是，则移动文件
+								if(::GetFileAttributes(recyPath)==-1)
+								{
+									MoveFile(path,recyPath);									
+								}
+								else//如果存在，则删除之前文件再移动
+								{
+									DeleteFile(path);
+									MoveFile(path,recyPath);									
+									
+								}
+
+							}
 
 							//更新用户索引记录
 							CServIndex* ServIndex=new CServIndex();
-							ServIndex->UpdateIndex(pServCtrl->m_strUserName);
+							CString rootpath=(0 == userInfo.Find(pServCtrl->m_strUserName)?pServCtrl->m_strUserName:pServCtrl->m_strShareFloder);
+							ServIndex->UpdateIndex(pServCtrl->m_strDiskRootPath,pServCtrl->m_strDiskIndexPath,rootpath);
+
+							//更新回收站索引记录
+							ServIndex->UpdateIndex(pServCtrl->m_strRecyclePath,pServCtrl->m_strRecycleIndexPath,pServCtrl->m_strUserName);
+
 							break;
 						}
 					case REFRESH:
 						{
 							//更新用户索引记录
 							CServIndex* ServIndex=new CServIndex();
-							ServIndex->UpdateIndex(pServCtrl->m_strUserName);
+							ServIndex->UpdateIndex(pServCtrl->m_strDiskRootPath,pServCtrl->m_strDiskIndexPath,pServCtrl->m_strUserName);
 
+							//更新共享文件夹索引
+							ServIndex->UpdateIndex(pServCtrl->m_strDiskRootPath,pServCtrl->m_strDiskIndexPath,pServCtrl->m_strShareFloder);
 							break;
 						}
 					case DOWNLOADFILE:
 						{
-							CString m_strUserMsg;//用户发过来的目录路径
-							m_strUserMsg=recvPack.sContent;
-
 							CString path;
-							path=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg;
+							path=pServCtrl->m_strDiskRootPath+userInfo;
 							//发送文件信息
 							pServCtrl->SendFile(pServCtrl->m_fdAllSocket.fd_array[i],path);
 
@@ -389,52 +399,230 @@ DWORD WINAPI CServerContrl::ServListenThread(LPVOID lpParam)
 						}
 					case DOWNLOADCATALOG:
 						{
-							CString m_strUserMsg;//用户发过来的目录路径
-							m_strUserMsg=recvPack.sContent;
-							CString tmpPath=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg;
+							CString tmpPath=pServCtrl->m_strDiskRootPath+userInfo;
 							//发送目录信息
 							pServCtrl->RecursiveSend(pServCtrl->m_fdAllSocket.fd_array[i],tmpPath,tmpPath);
 
 							//发送目录结束信息
-							ZeroMemory(&sendPack,sizeof(sendPack));
 							CString endSending=_T("send_cat_end");
-							int n=endSending.GetLength();
-							int len=WideCharToMultiByte(CP_ACP,0,endSending,endSending.GetLength(),NULL,0,NULL,NULL);
-							WideCharToMultiByte(CP_ACP,0,endSending,endSending.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
-							sendPack.sContent[len]='\0';
-							sendPack.nContentLen=len;
-							sendPack.iType=1;
-							sendPack.nPackLen=sizeof(sendPack);
-							int result=send(pServCtrl->m_fdAllSocket.fd_array[i],(char*)&sendPack,sendPack.nPackLen,0);
+							//发送索引信息
+							pServCtrl->SendDataInfo(pServCtrl->m_fdAllSocket.fd_array[i],endSending);
 
-							if(result==SOCKET_ERROR)
-							{
-								AfxMessageBox(_T("发送目录结束包失败！"));
-							}
 							break;
 						}
 					case MOVEFILE:
 						{
-							CString m_strUserMsg;//用户发过来的目录路径
-							m_strUserMsg=recvPack.sContent;
-							
-							int pos=m_strUserMsg.Find('+');
-							CString srcPath=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg.Left(pos);
-							CString desPath=pServCtrl->m_strDiskRootPath+_T("\\")+m_strUserMsg.Right(m_strUserMsg.GetLength()-pos-1);
+							int pos=userInfo.Find('+');
+							CString srcPath=pServCtrl->m_strDiskRootPath+userInfo.Left(pos);
+							CString desPath=pServCtrl->m_strDiskRootPath+userInfo.Right(userInfo.GetLength()-pos-1);
 
-							//判断删除的是文件还是文件夹
+							//判断移动的是文件还是文件夹
 							DWORD value = GetFileAttributes(srcPath);
 							if( (value & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY )
 							{
 								pServCtrl->RecursiveMove(srcPath,desPath);
 							}
 							else
-								MoveFile(srcPath,desPath);
+							{
+								if(::GetFileAttributes(desPath)==-1)
+								{
+									MoveFile(srcPath,desPath);									
+								}
+								else
+								{
+									DeleteFile(srcPath);
+									MoveFile(srcPath,desPath);	
+								}
+							}
+
 
 							//更新用户索引记录
 							CServIndex* ServIndex=new CServIndex();
-							ServIndex->UpdateIndex(pServCtrl->m_strUserName);
+							CString rootpath=(0 == userInfo.Find(pServCtrl->m_strUserName)?pServCtrl->m_strUserName:pServCtrl->m_strShareFloder);
+							ServIndex->UpdateIndex(pServCtrl->m_strDiskRootPath,pServCtrl->m_strDiskIndexPath,rootpath);
 
+							break;
+						}
+					case RECYCLE_UPDATE:
+						{
+							//更新回收站索引记录
+							CServIndex* ServIndex=new CServIndex();
+							//ServIndex->UpdateIndex(pServCtrl->m_strRecyclePath,pServCtrl->m_strRecycleIndexPath,pServCtrl->m_strUserName);
+
+							pServCtrl->m_StrIndexInfo=ServIndex->getCatalogInfo(pServCtrl->m_strRecyclePath,pServCtrl->m_strRecycleIndexPath,userInfo);
+
+							//发送索引信息
+							pServCtrl->SendDataInfo(pServCtrl->m_fdAllSocket.fd_array[i],pServCtrl->m_StrIndexInfo);
+							break;
+						}
+				
+					case RECYCLE_RESTORE:
+						{
+							//创建历史文件索引
+							CRecycleFileHistriyPath* pRecyleFileHisPath=new CRecycleFileHistriyPath(pServCtrl->m_strUserName);
+							CString hisPath;
+							CString curPath=pServCtrl->m_strRecyclePath+userInfo;
+							pRecyleFileHisPath->DeleteIndex(curPath,hisPath);
+
+							//判断移动的是文件还是文件夹
+							DWORD value = GetFileAttributes(curPath);
+							if( (value & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY )
+							{
+								pServCtrl->RecursiveMove(curPath,hisPath);
+							}
+							else
+							{
+								if(::GetFileAttributes(hisPath)==-1)
+								{
+									MoveFile(curPath,hisPath);									
+								}
+								else
+								{
+									DeleteFile(curPath);
+									MoveFile(curPath,hisPath);	
+								}
+							}
+
+							//更新用户索引记录
+							CServIndex* ServIndex=new CServIndex();
+							CString rootpath=(0 == userInfo.Find(pServCtrl->m_strUserName)?pServCtrl->m_strUserName:pServCtrl->m_strShareFloder);
+							ServIndex->UpdateIndex(pServCtrl->m_strDiskRootPath,pServCtrl->m_strDiskIndexPath,rootpath);
+							//更新回收站索引记录
+							ServIndex->UpdateIndex(pServCtrl->m_strRecyclePath,pServCtrl->m_strRecycleIndexPath,pServCtrl->m_strUserName);
+
+
+							break;
+						}
+					case RECYCLE_DEL:
+						{
+
+							//创建历史文件索引
+							CRecycleFileHistriyPath* pRecyleFileHisPath=new CRecycleFileHistriyPath(pServCtrl->m_strUserName);
+							CString hisPath;
+							CString curPath=pServCtrl->m_strRecyclePath+userInfo;
+							pRecyleFileHisPath->DeleteIndex(curPath,hisPath);
+
+							//判断移动的是文件还是文件夹
+							DWORD value = GetFileAttributes(curPath);
+							if( (value & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY )
+							{
+								pServCtrl->RecursiveDelete(curPath);
+							}
+							else
+							{
+					
+								DeleteFile(curPath);
+		
+							}
+
+							CServIndex* ServIndex=new CServIndex();
+							//更新回收站索引记录
+							ServIndex->UpdateIndex(pServCtrl->m_strRecyclePath,pServCtrl->m_strRecycleIndexPath,pServCtrl->m_strUserName);
+
+
+							break;
+						}
+					case RECYCLE_CLEAN:
+						{
+							CString curPath=pServCtrl->m_strRecyclePath+userInfo;
+							pServCtrl->RecursiveDelete(curPath);
+							//递归删除之后重新创建用户的回收站目录
+							CreateDirectory(curPath,NULL);
+
+							CServIndex* ServIndex=new CServIndex();
+							//更新回收站索引记录
+							ServIndex->UpdateIndex(pServCtrl->m_strRecyclePath,pServCtrl->m_strRecycleIndexPath,pServCtrl->m_strUserName);
+
+							//清空历史文件路径记录
+							CRecycleFileHistriyPath* pRecyleFileHisPath=new CRecycleFileHistriyPath(pServCtrl->m_strUserName);
+							pRecyleFileHisPath->CleanIndexFile();
+							break;
+						}
+					case RECYCLE_FIND:
+						{
+							CServIndex* pIndex=new CServIndex();
+							CString indexInfo=pIndex->FindFileIndex(pServCtrl->m_strRecycleIndexPath,pServCtrl->m_strUserName,userInfo);
+							pServCtrl->SendDataInfo(pServCtrl->m_fdAllSocket.fd_array[i],indexInfo);
+
+							break;
+						}
+					case GETFILESIZEINFO:
+						{
+							pServCtrl->m_fileTotalSize=0;
+							CString path=pServCtrl->m_strDiskRootPath+userInfo;
+							//判断是文件还是文件夹
+							DWORD value = GetFileAttributes(path);
+							if( (value & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY )
+							{
+								pServCtrl->GetDownLoadFileSize(path);
+							}
+							else
+							{
+								HANDLE hFile = CreateFile(path, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL); 		
+								pServCtrl->m_fileTotalSize=GetFileSize(hFile,NULL);
+								CloseHandle(hFile);
+							}
+							//发送文件大小信息
+							CString strFileSize;
+							strFileSize.Format(_T("%lld"),pServCtrl->m_fileTotalSize);
+							pServCtrl->SendDataInfo(pServCtrl->m_fdAllSocket.fd_array[i],strFileSize);
+							
+							break;
+						}
+					case HISTROYVERSION:
+						{
+							CHistroyVersionIndex* pIndex=new CHistroyVersionIndex();
+							int pos=userInfo.ReverseFind('\\');
+							CString fileName=userInfo.Right(userInfo.GetLength()-pos-1);
+							CString indexInfo=pIndex->GetHisVerIndex(pServCtrl->m_strUserName,fileName);
+							CString currentMd5Code=pIndex->GetCurrentMd5Code(pServCtrl->m_strDiskRootPath+userInfo);
+							indexInfo = indexInfo+currentMd5Code;
+							pServCtrl->SendDataInfo(pServCtrl->m_fdAllSocket.fd_array[i],indexInfo);
+
+							break;
+						}
+					case HIS_RESTORE:
+						{
+							CHistroyVersionIndex* pIndex=new CHistroyVersionIndex();
+							pIndex->RestoreIndex(pServCtrl->m_strUserName,userInfo);
+							//更新用户索引记录
+							CServIndex* ServIndex=new CServIndex();
+							CString rootpath=(0 == userInfo.Find(pServCtrl->m_strUserName)?pServCtrl->m_strUserName:pServCtrl->m_strShareFloder);
+							ServIndex->UpdateIndex(pServCtrl->m_strDiskRootPath,pServCtrl->m_strDiskIndexPath,rootpath);
+
+							break;
+						}
+					case HIS_DELETE:
+						{
+							CHistroyVersionIndex* pIndex=new CHistroyVersionIndex();
+							pIndex->DelIndex(pServCtrl->m_strUserName,userInfo);
+							break;
+						}
+					case HIS_CLEAR:
+						{
+							CHistroyVersionIndex* pIndex=new CHistroyVersionIndex();
+							pIndex->ClearIndex(pServCtrl->m_strUserName,userInfo);
+							break;
+						}
+					case FINDFILEBYSTR:
+						{
+							CServIndex* pIndex=new CServIndex();
+							CString indexInfo=pIndex->FindFileIndex(pServCtrl->m_strDiskIndexPath,pServCtrl->m_strUserName,userInfo);
+							pServCtrl->SendDataInfo(pServCtrl->m_fdAllSocket.fd_array[i],indexInfo);
+							break;
+						}
+					case FINDFILEBYTIME:
+						{
+							CServIndex* pIndex=new CServIndex();
+							int pos=userInfo.Find(':');
+							CString strCurrentPath=userInfo.Left(pos);
+							userInfo=userInfo.Right(userInfo.GetLength()-pos-1);
+							CString strStartT,strEndT;
+							pos=userInfo.Find(':');
+							strStartT=userInfo.Left(pos);
+							strEndT=userInfo.Right(userInfo.GetLength()-pos-1);
+							CString indexInfo=pIndex->FindFileByTime(strCurrentPath,strStartT,strEndT);
+							pServCtrl->SendDataInfo(pServCtrl->m_fdAllSocket.fd_array[i],indexInfo);
 							break;
 						}
 					}
@@ -443,6 +631,63 @@ DWORD WINAPI CServerContrl::ServListenThread(LPVOID lpParam)
 		}
 	}
 	Sleep(100);
+}
+//判断目录是否存在
+bool CServerContrl::IfFloderExist(CString path)
+{
+	WIN32_FIND_DATA wfd;
+	BOOL reVal=false;
+	HANDLE hFind=FindFirstFile(path,&wfd);
+	if((hFind != INVALID_HANDLE_VALUE) && (wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+		reVal=true;
+	FindClose(hFind);
+	return reVal;
+}
+//获取下载文件大小信息
+void CServerContrl::GetDownLoadFileSize(CString path)
+{
+	CFileFind finder;
+	BOOL ret;
+	if(path.Find('.'))
+		ret=finder.FindFile(path);
+	else
+		ret=finder.FindFile(path+_T("\\*.*"));
+	
+	while(ret)
+	{
+		ret=finder.FindNextFile();
+
+		if(finder.IsDots())
+			continue;
+		if(finder.IsDirectory())
+			GetDownLoadFileSize(path+_T("\\")+finder.GetFileName());
+		else
+			m_fileTotalSize+=finder.GetLength();
+
+	}
+	finder.Close();
+}
+//发送索引信息
+bool CServerContrl::SendDataInfo(SOCKET cSocket,CString strIndexInfo,int dataType/* =0 */)
+{
+	//返回用户的目录信息
+	DataPackage sendPack;
+	ZeroMemory(&sendPack,sizeof(sendPack));
+	int n=strIndexInfo.GetLength();
+	int len=WideCharToMultiByte(CP_ACP,0,strIndexInfo,strIndexInfo.GetLength(),NULL,0,NULL,NULL);
+	WideCharToMultiByte(CP_ACP,0,strIndexInfo,strIndexInfo.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
+	sendPack.sContent[len]='\0';
+	sendPack.nContentLen=len;
+	sendPack.nPackLen=sizeof(sendPack);
+	sendPack.iType=dataType;
+
+	//此处为日志文件添加switch结构
+	int retvalue=send(cSocket,(char*)&sendPack,sendPack.nPackLen,0);
+	if(SOCKET_ERROR == retvalue)
+	{
+		AfxMessageBox(_T("发送用户目录结构信息失败！"));
+		return false;
+	}
 }
 //发送文件
 void CServerContrl::SendFile(SOCKET cSocket,CString filePath)
@@ -486,20 +731,8 @@ void CServerContrl::SendFile(SOCKET cSocket,CString filePath)
 
 	fclose(infile);
 	//发送文件结束包
-	ZeroMemory(&sendPack,sizeof(sendPack));
-	sendPack.nPackLen=sizeof(sendPack);
 	CString strTmp=_T("send_file_end");
-	int n=strTmp.GetLength();
-	int len=WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength(),NULL,0,NULL,NULL);
-	WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
-	sendPack.sContent[len]='\0';
-	sendPack.nContentLen=len;
-	sendPack.iType=2;
-	result=send(cSocket,(char*)&sendPack,sendPack.nPackLen,0);
-	if(result==SOCKET_ERROR)
-	{
-		AfxMessageBox(_T("发送文件结束包失败！"));
-	}
+	SendDataInfo(cSocket,strTmp,2);
 }
 //递归移动目录
 bool CServerContrl::RecursiveMove(CString srcPath,CString desPath)
@@ -564,7 +797,6 @@ void CServerContrl::RecursiveSend(SOCKET cSocket,CString szPath,CString rootPath
 	CFileFind ff;  
 	CString path = szPath;  
 	int result;
-	DataPackage sendPack;
 
 	if(path.Right(1) != _T("\\"))  
 		path += _T("\\");  
@@ -579,21 +811,9 @@ void CServerContrl::RecursiveSend(SOCKET cSocket,CString szPath,CString rootPath
 		//是文件时直接发送文件
 		if (!ff.IsDots() && !ff.IsDirectory())  
 		{
-			ZeroMemory(&sendPack,sizeof(sendPack));
-			sendPack.iType=2; //发送文件
-			sendPack.nPackLen=sizeof(sendPack);
-			CString strTmp=ReturnCientPath(ff.GetFilePath(),rootPath);
-			int n=strTmp.GetLength();
-			int len=WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength(),NULL,0,NULL,NULL);
-			WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
-			sendPack.sContent[len]='\0';
-			sendPack.nContentLen=len;
 			//如果发送的是文件，先发送一个确认包
-			result=send(cSocket,(char*)&sendPack,sendPack.nPackLen,0);
-			if(result==SOCKET_ERROR)
-			{
-				AfxMessageBox(_T("发送文件结束包失败！"));
-			}
+			CString strTmp=ReturnCientPath(ff.GetFilePath(),rootPath);
+			SendDataInfo(cSocket,strTmp,2);
 			SendFile(cSocket,ff.GetFilePath());
 		}
 		else if (ff.IsDots())  
@@ -601,22 +821,9 @@ void CServerContrl::RecursiveSend(SOCKET cSocket,CString szPath,CString rootPath
 		else if (ff.IsDirectory())  
 		{  
 			//发送目录名称信息
-			ZeroMemory(&sendPack,sizeof(sendPack));
 			path = ff.GetFilePath(); 
 			CString strTmp=ReturnCientPath(ff.GetFilePath(),rootPath);
-			int n=strTmp.GetLength();
-			int len=WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength(),NULL,0,NULL,NULL);
-			WideCharToMultiByte(CP_ACP,0,strTmp,strTmp.GetLength()+1,sendPack.sContent,len+1,NULL,NULL);
-			sendPack.sContent[len]='\0';
-			sendPack.nContentLen=len;
-			sendPack.iType=1;
-			sendPack.nPackLen=sizeof(sendPack);
-			result=send(cSocket,(char*)&sendPack,sendPack.nPackLen,0);
-
-			if(result==SOCKET_ERROR)
-			{
-				AfxMessageBox(_T("发送文件结束包失败！"));
-			}
+			SendDataInfo(cSocket,strTmp,1);
 			//是目录时继续递归，发送该目录下的文件  
 			RecursiveSend(cSocket,path,rootPath);  
  
